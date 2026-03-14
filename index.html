@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32-S3 Wireless Camera</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+        
+        h1 small {
+            display: block;
+            font-size: 0.5em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .camera-info {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        .info-label {
+            color: #666;
+            font-weight: bold;
+        }
+        
+        .info-value {
+            color: #2196F3;
+            background: #e3f2fd;
+            padding: 2px 10px;
+            border-radius: 15px;
+        }
+        
+        .video-container {
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .video-container::before {
+            content: '';
+            display: block;
+            padding-top: 75%; /* 4:3 Aspect Ratio */
+        }
+        
+        #live-stream {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            flex: 1 1 auto;
+            min-width: 120px;
+        }
+        
+        button.primary {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        button.primary:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        button.secondary {
+            background: #2196F3;
+            color: white;
+        }
+        
+        button.secondary:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.3);
+        }
+        
+        button.warning {
+            background: #ff9800;
+            color: white;
+        }
+        
+        button.warning:hover {
+            background: #f57c00;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.3);
+        }
+        
+        button.danger {
+            background: #f44336;
+            color: white;
+        }
+        
+        button.danger:hover {
+            background: #da190b;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(244, 67, 54, 0.3);
+        }
+        
+        .status-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 5px;
+        }
+        
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .badge.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .badge.danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .fps-counter {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .connection-status {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .connected {
+            background: #4CAF50;
+            box-shadow: 0 0 10px #4CAF50;
+        }
+        
+        .disconnected {
+            background: #f44336;
+            box-shadow: 0 0 10px #f44336;
+        }
+        
+        .debug-info {
+            font-family: monospace;
+            font-size: 12px;
+            color: #666;
+            margin-top: 15px;
+            padding: 10px;
+            background: #f1f1f1;
+            border-radius: 5px;
+            word-break: break-all;
+        }
+        
+        .stream-url {
+            background: #e9ecef;
+            padding: 8px;
+            border-radius: 5px;
+            font-family: monospace;
+            user-select: all;
+            cursor: pointer;
+        }
+        
+        .stream-url:hover {
+            background: #dee2e6;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+            
+            button {
+                padding: 10px 16px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            📹 ESP32-S3 Wireless Camera
+            <small>RHYX M21-45 | 320x240</small>
+        </h1>
+        
+        <div class="camera-info">
+            <div class="info-row">
+                <span class="info-label">Camera URL:</span>
+                <span class="info-value stream-url" onclick="copyToClipboard()" id="cameraUrl">http://192.168.31.214/</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Stream Endpoint:</span>
+                <span class="info-value">http://192.168.31.214/stream</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Capture Endpoint:</span>
+                <span class="info-value">http://192.168.31.214/capture</span>
+            </div>
+        </div>
+        
+        <div class="video-container">
+            <img id="live-stream" src="" alt="Camera Stream">
+        </div>
+        
+        <div class="controls">
+            <button class="primary" onclick="startStream()">▶ Start Stream</button>
+            <button class="danger" onclick="stopStream()">⏹ Stop Stream</button>
+            <button class="secondary" onclick="captureStill()">📸 Capture Still</button>
+            <button class="warning" onclick="refreshStream()">🔄 Refresh</button>
+        </div>
+        
+        <div class="status-panel">
+            <div class="status-row">
+                <span>
+                    <span class="connection-status" id="connectionLed"></span>
+                    Connection Status:
+                </span>
+                <span class="badge" id="connectionStatus">Disconnected</span>
+            </div>
+            
+            <div class="status-row">
+                <span>📊 Stream FPS:</span>
+                <span class="fps-counter" id="fpsCounter">0</span>
+            </div>
+            
+            <div class="status-row">
+                <span>📦 Frames Received:</span>
+                <span id="frameCounter">0</span>
+            </div>
+            
+            <div class="status-row">
+                <span>⏱️ Stream Duration:</span>
+                <span id="streamDuration">00:00</span>
+            </div>
+            
+            <div class="status-row">
+                <span>🔄 Last Refresh:</span>
+                <span id="lastRefresh">Never</span>
+            </div>
+        </div>
+        
+        <div class="debug-info" id="debugInfo">
+            Click "Start Stream" to begin viewing your camera
+        </div>
+    </div>
+
+    <script>
+        // Your ESP32 camera details
+        const CAMERA_IP = "192.168.31.214";
+        const STREAM_URL = `http://${CAMERA_IP}/stream`;
+        const CAPTURE_URL = `http://${CAMERA_IP}/capture`;
+        const ROOT_URL = `http://${CAMERA_IP}/`;
+        
+        // State variables
+        let streamActive = false;
+        let frameCount = 0;
+        let fps = 0;
+        let lastFpsUpdate = Date.now();
+        let streamStartTime = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        
+        // DOM elements
+        const streamImg = document.getElementById('live-stream');
+        const connectionLed = document.getElementById('connectionLed');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const fpsCounter = document.getElementById('fpsCounter');
+        const frameCounter = document.getElementById('frameCounter');
+        const streamDuration = document.getElementById('streamDuration');
+        const lastRefresh = document.getElementById('lastRefresh');
+        const debugInfo = document.getElementById('debugInfo');
+        
+        // Copy URL to clipboard
+        function copyToClipboard() {
+            const url = document.getElementById('cameraUrl').textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('URL copied to clipboard!');
+            });
+        }
+        
+        // Start streaming
+        function startStream() {
+            streamActive = true;
+            frameCount = 0;
+            streamStartTime = Date.now();
+            reconnectAttempts = 0;
+            
+            updateConnectionStatus(true);
+            refreshStream();
+            
+            debug('Starting stream...');
+        }
+        
+        // Stop streaming
+        function stopStream() {
+            streamActive = false;
+            streamImg.src = '';
+            
+            updateConnectionStatus(false);
+            debug('Stream stopped');
+        }
+        
+        // Capture still image
+        function captureStill() {
+            stopStream();
+            
+            // Open still image in new window
+            const stillUrl = CAPTURE_URL + '?' + new Date().getTime();
+            window.open(stillUrl, '_blank');
+            
+            debug(`Capturing still image: ${stillUrl}`);
+        }
+        
+        // Refresh/restart stream
+        function refreshStream() {
+            if (!streamActive) {
+                startStream();
+                return;
+            }
+            
+            const timestamp = new Date().getTime();
+            streamImg.src = STREAM_URL + '?' + timestamp;
+            
+            const now = new Date();
+            lastRefresh.textContent = now.toLocaleTimeString();
+            
+            debug(`Stream refreshed at ${now.toLocaleTimeString()}`);
+        }
+        
+        // Update connection status UI
+        function updateConnectionStatus(connected) {
+            if (connected) {
+                connectionLed.className = 'connection-status connected';
+                connectionStatus.textContent = 'Connected';
+                connectionStatus.className = 'badge success';
+            } else {
+                connectionLed.className = 'connection-status disconnected';
+                connectionStatus.textContent = 'Disconnected';
+                connectionStatus.className = 'badge danger';
+            }
+        }
+        
+        // Handle stream errors
+        streamImg.onerror = function() {
+            if (streamActive) {
+                reconnectAttempts++;
+                
+                if (reconnectAttempts <= maxReconnectAttempts) {
+                    debug(`Stream error, reconnecting... (Attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+                    
+                    setTimeout(() => {
+                        if (streamActive) {
+                            refreshStream();
+                        }
+                    }, 2000 * reconnectAttempts); // Exponential backoff
+                } else {
+                    debug('Max reconnection attempts reached. Please check camera connection.');
+                    stopStream();
+                }
+            }
+        };
+        
+        // Handle successful frame load
+        streamImg.onload = function() {
+            if (!streamActive) return;
+            
+            frameCount++;
+            frameCounter.textContent = frameCount;
+            
+            // Calculate FPS
+            const now = Date.now();
+            const delta = (now - lastFpsUpdate) / 1000;
+            
+            if (delta >= 1) {
+                fps = (frameCount / delta).toFixed(1);
+                fpsCounter.textContent = fps;
+                frameCount = 0;
+                lastFpsUpdate = now;
+            }
+            
+            // Update stream duration
+            if (streamStartTime) {
+                const duration = Math.floor((now - streamStartTime) / 1000);
+                const minutes = Math.floor(duration / 60);
+                const seconds = duration % 60;
+                streamDuration.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            reconnectAttempts = 0; // Reset reconnect counter on successful frame
+            
+            // Request next frame
+            if (streamActive) {
+                streamImg.src = STREAM_URL + '?' + now;
+            }
+        };
+        
+        // Debug logging
+        function debug(message) {
+            console.log(`[Camera] ${message}`);
+            debugInfo.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+        }
+        
+        // Test connection on page load
+        window.onload = function() {
+            debug(`Camera configured at ${ROOT_URL}`);
+            
+            // Test if camera is reachable
+            fetch(ROOT_URL, { method: 'HEAD', mode: 'no-cors' })
+                .then(() => {
+                    debug('Camera is reachable! Click Start Stream to begin.');
+                })
+                .catch(() => {
+                    debug('⚠️ Camera not reachable. Check if ESP32 is powered and on the same network.');
+                });
+        };
+        
+        // Auto-refresh stream every 30 seconds to prevent freeze
+        setInterval(() => {
+            if (streamActive) {
+                refreshStream();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
