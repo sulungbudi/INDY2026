@@ -1,10 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ESP32 Camera Face Mesh</title>
+    <title>ESP32-S3 Wireless Camera - Face Mesh</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body {
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
@@ -24,97 +30,42 @@
             text-align: center;
             color: #333;
             margin-bottom: 20px;
+            font-size: 2em;
         }
         
-        /* Warning Box */
-        .warning-box {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeeba;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .warning-box h3 {
-            margin-top: 0;
-            color: #533f03;
-        }
-        
-        .solution-steps {
-            background: #e9ecef;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-            font-family: monospace;
-        }
-        
-        .solution-steps code {
-            background: #dee2e6;
-            padding: 2px 6px;
-            border-radius: 4px;
+        h1 small {
             display: block;
-            margin: 10px 0;
+            font-size: 0.5em;
+            color: #666;
+            margin-top: 5px;
         }
         
-        /* Proxy toggle */
-        .proxy-toggle {
-            margin: 20px 0;
-            padding: 15px;
-            background: #e3f2fd;
-            border-radius: 8px;
-        }
-        
-        .url-section {
+        .camera-info {
             background: #f5f5f5;
             border-radius: 10px;
-            padding: 20px;
+            padding: 15px;
             margin-bottom: 20px;
+            border-left: 4px solid #4CAF50;
         }
         
-        .input-group {
+        .info-row {
             display: flex;
-            gap: 10px;
-            margin-top: 10px;
-            flex-wrap: wrap;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-family: monospace;
+            font-size: 14px;
         }
         
-        input {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
+        .info-label {
+            color: #666;
+            font-weight: bold;
         }
         
-        button {
-            padding: 12px 24px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        
-        button.proxy-btn {
-            background: #ff9800;
-        }
-        
-        .status {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        
-        .status.success {
-            background: #d4edda;
-            color: #155724;
+        .info-value {
+            color: #2196F3;
+            background: #e3f2fd;
+            padding: 2px 10px;
+            border-radius: 15px;
         }
         
         .video-container {
@@ -123,10 +74,16 @@
             border-radius: 10px;
             overflow: hidden;
             margin: 20px 0;
-            display: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         
-        canvas {
+        #live-stream {
+            width: 100%;
+            display: block;
+            background: #000;
+        }
+        
+        #overlay-canvas {
             position: absolute;
             top: 0;
             left: 0;
@@ -135,200 +92,624 @@
             pointer-events: none;
         }
         
-        img {
-            width: 100%;
-            display: block;
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
         }
         
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            margin: 20px 0;
-            padding: 15px;
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            flex: 1 1 auto;
+            min-width: 120px;
+        }
+        
+        button.primary {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        button.primary:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        button.secondary {
+            background: #2196F3;
+            color: white;
+        }
+        
+        button.secondary:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.3);
+        }
+        
+        button.warning {
+            background: #ff9800;
+            color: white;
+        }
+        
+        button.warning:hover {
+            background: #f57c00;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.3);
+        }
+        
+        button.danger {
+            background: #f44336;
+            color: white;
+        }
+        
+        button.danger:hover {
+            background: #da190b;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(244, 67, 54, 0.3);
+        }
+        
+        .toggle-btn {
+            background: #9c27b0;
+            color: white;
+        }
+        
+        .toggle-btn:hover {
+            background: #7b1fa2;
+        }
+        
+        .status-panel {
             background: #f8f9fa;
             border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 5px;
+        }
+        
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .badge.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .badge.danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .badge.info {
+            background: #e3f2fd;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .fps-counter {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .connection-status {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .connected {
+            background: #4CAF50;
+            box-shadow: 0 0 10px #4CAF50;
+        }
+        
+        .disconnected {
+            background: #f44336;
+            box-shadow: 0 0 10px #f44336;
+        }
+        
+        .debug-info {
+            font-family: monospace;
+            font-size: 12px;
+            color: #666;
+            margin-top: 15px;
+            padding: 10px;
+            background: #f1f1f1;
+            border-radius: 5px;
+            word-break: break-all;
+        }
+        
+        .model-loading {
+            margin: 20px 0;
+            padding: 20px;
+            background: #e3f2fd;
+            border-radius: 10px;
+            text-align: center;
             display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #ddd;
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #4CAF50;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .face-count {
+            font-size: 20px;
+            font-weight: bold;
+            color: #9c27b0;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📹 ESP32 Camera Face Mesh</h1>
+        <h1>
+            📹 ESP32-S3 Wireless Camera - Face Mesh
+            <small>RHYX M21-45 | 320x240</small>
+        </h1>
         
-        <!-- Clear warning and solution -->
-        <div class="warning-box">
-            <h3>⚠️ HTTPS Blocking Camera Connection</h3>
-            <p>GitHub Pages uses HTTPS, but your camera uses HTTP. Browsers block this for security.</p>
+        <div class="camera-info">
+            <div class="info-row">
+                <span class="info-label">Camera URL:</span>
+                <span class="info-value stream-url" onclick="copyToClipboard()" id="cameraUrl">http://192.168.31.214/</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Stream Endpoint:</span>
+                <span class="info-value">http://192.168.31.214/stream</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Capture Endpoint:</span>
+                <span class="info-value">http://192.168.31.214/capture</span>
+            </div>
+        </div>
+        
+        <!-- Model Loading -->
+        <div class="model-loading" id="modelLoading">
+            <div>Loading Face Mesh Model...</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="modelProgress"></div>
+            </div>
+            <div id="modelStatus">Downloading from CDN...</div>
+        </div>
+        
+        <div class="video-container">
+            <img id="live-stream" src="" alt="Camera Stream" crossorigin="anonymous">
+            <canvas id="overlay-canvas"></canvas>
+        </div>
+        
+        <div class="controls">
+            <button class="primary" onclick="startStream()">▶ Start Stream</button>
+            <button class="danger" onclick="stopStream()">⏹ Stop Stream</button>
+            <button class="secondary" onclick="captureStill()">📸 Capture Still</button>
+            <button class="warning" onclick="refreshStream()">🔄 Refresh</button>
+            <button class="toggle-btn" onclick="toggleFaceMesh()" id="toggleMeshBtn">🔮 Disable Face Mesh</button>
+        </div>
+        
+        <div class="status-panel">
+            <div class="status-row">
+                <span>
+                    <span class="connection-status" id="connectionLed"></span>
+                    Connection Status:
+                </span>
+                <span class="badge" id="connectionStatus">Disconnected</span>
+            </div>
             
-            <div class="solution-steps">
-                <strong>✅ Solution 1 (Recommended - Will Work):</strong>
-                <code>python -m http.server 8000</code>
-                Then open: <code>http://localhost:8000/detectFace.html</code>
+            <div class="status-row">
+                <span>📊 Stream FPS:</span>
+                <span class="fps-counter" id="fpsCounter">0</span>
             </div>
             
-            <div class="solution-steps">
-                <strong>⚠️ Solution 2 (CORS Proxy - May Work):</strong>
-                Try the proxy option below.
+            <div class="status-row">
+                <span>📦 Frames Received:</span>
+                <span id="frameCounter">0</span>
+            </div>
+            
+            <div class="status-row">
+                <span>👤 Faces Detected:</span>
+                <span class="face-count" id="faceCount">0</span>
+            </div>
+            
+            <div class="status-row">
+                <span>⏱️ Stream Duration:</span>
+                <span id="streamDuration">00:00</span>
+            </div>
+            
+            <div class="status-row">
+                <span>🔄 Last Refresh:</span>
+                <span id="lastRefresh">Never</span>
             </div>
         </div>
         
-        <!-- Proxy toggle -->
-        <div class="proxy-toggle">
-            <label style="display: flex; align-items: center; gap: 10px;">
-                <input type="checkbox" id="useProxy" onclick="toggleProxy()">
-                <strong>Use CORS Proxy (slower, but may work on HTTPS)</strong>
-            </label>
-            <p style="font-size: 12px; color: #666; margin-top: 5px;">
-                Proxy: https://cors-anywhere.herokuapp.com/
-            </p>
-        </div>
-        
-        <!-- URL Section -->
-        <div class="url-section">
-            <h3>Camera URL: http://192.168.31.214</h3>
-            <div class="input-group">
-                <input type="text" id="cameraUrl" value="http://192.168.31.214" readonly>
-                <button onclick="connectWithProxy(false)" id="directBtn">Connect Direct</button>
-                <button onclick="connectWithProxy(true)" id="proxyBtn" class="proxy-btn">Connect via Proxy</button>
-            </div>
-            <div id="connectionStatus" class="status" style="display: none;"></div>
-        </div>
-        
-        <!-- Video Display -->
-        <div class="video-container" id="videoContainer">
-            <img id="cameraStream" crossorigin="anonymous">
-            <canvas id="overlayCanvas"></canvas>
-        </div>
-        
-        <!-- Stats -->
-        <div class="stats" id="statsPanel">
-            <div class="stat-item">
-                <div>FPS</div>
-                <div class="stat-value" id="fpsDisplay">0</div>
-            </div>
-            <div class="stat-item">
-                <div>Faces</div>
-                <div class="stat-value" id="faceCount">0</div>
-            </div>
+        <div class="debug-info" id="debugInfo">
+            Click "Start Stream" to begin viewing your camera with face mesh
         </div>
     </div>
 
-    <!-- MediaPipe -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+    <!-- MediaPipe Face Mesh Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
     
     <script>
-        const PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
-        let useProxy = false;
-        let faceMesh = null;
-        let streamImg = document.getElementById('cameraStream');
-        let canvas = document.getElementById('overlayCanvas');
-        let ctx = canvas.getContext('2d');
-        let isStreaming = false;
-        let frameCount = 0;
-        let lastFpsUpdate = Date.now();
+        // Your ESP32 camera details
+        const CAMERA_IP = "192.168.31.214";
+        const STREAM_URL = `http://${CAMERA_IP}/stream`;
+        const CAPTURE_URL = `http://${CAMERA_IP}/capture`;
+        const ROOT_URL = `http://${CAMERA_IP}/`;
         
-        function toggleProxy() {
-            useProxy = document.getElementById('useProxy').checked;
-            showStatus(`Proxy ${useProxy ? 'enabled' : 'disabled'}`, 'info');
-        }
+        // State variables
+        let streamActive = false;
+        let frameCount = 0;
+        let fps = 0;
+        let lastFpsUpdate = Date.now();
+        let streamStartTime = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        
+        // Face Mesh variables
+        let faceMesh = null;
+        let faceMeshEnabled = true;
+        let isModelLoaded = false;
+        
+        // DOM elements
+        const streamImg = document.getElementById('live-stream');
+        const canvas = document.getElementById('overlay-canvas');
+        const ctx = canvas.getContext('2d');
+        const connectionLed = document.getElementById('connectionLed');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const fpsCounter = document.getElementById('fpsCounter');
+        const frameCounter = document.getElementById('frameCounter');
+        const faceCount = document.getElementById('faceCount');
+        const streamDuration = document.getElementById('streamDuration');
+        const lastRefresh = document.getElementById('lastRefresh');
+        const debugInfo = document.getElementById('debugInfo');
+        const modelLoading = document.getElementById('modelLoading');
+        const modelProgress = document.getElementById('modelProgress');
+        const modelStatus = document.getElementById('modelStatus');
+        const toggleMeshBtn = document.getElementById('toggleMeshBtn');
         
         // Initialize Face Mesh
         async function initFaceMesh() {
-            faceMesh = new FaceMesh({
-                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`
-            });
+            modelLoading.style.display = 'block';
             
-            faceMesh.setOptions({
-                maxNumFaces: 3,
-                refineLandmarks: true,
-                minDetectionConfidence: 0.5
-            });
-            
-            faceMesh.onResults((results) => {
-                if (results.multiFaceLandmarks) {
-                    document.getElementById('faceCount').textContent = results.multiFaceLandmarks.length;
-                    drawFaceMesh(results);
-                }
-            });
-        }
-        
-        function drawFaceMesh(results) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (!results.multiFaceLandmarks) return;
-            
-            ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 2;
-            
-            for (const landmarks of results.multiFaceLandmarks) {
-                ctx.beginPath();
-                for (let i = 0; i < landmarks.length; i += 15) {
-                    const point = landmarks[i];
-                    if (i === 0) {
-                        ctx.moveTo(point.x * canvas.width, point.y * canvas.height);
-                    } else {
-                        ctx.lineTo(point.x * canvas.width, point.y * canvas.height);
+            try {
+                faceMesh = new FaceMesh({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`;
                     }
-                }
-                ctx.stroke();
+                });
+                
+                faceMesh.setOptions({
+                    maxNumFaces: 3,
+                    refineLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+                
+                faceMesh.onResults(onFaceMeshResults);
+                
+                // Progress animation
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 10;
+                    modelProgress.style.width = progress + '%';
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        modelStatus.textContent = 'Model loaded!';
+                        isModelLoaded = true;
+                        setTimeout(() => {
+                            modelLoading.style.display = 'none';
+                        }, 500);
+                    }
+                }, 200);
+                
+            } catch (error) {
+                console.error('FaceMesh error:', error);
+                debug('Failed to load face mesh model');
+                modelLoading.style.display = 'none';
             }
         }
         
-        async function processFrame() {
-            if (!isStreaming || !faceMesh || !streamImg.complete) return;
+        // Handle face mesh results
+        function onFaceMeshResults(results) {
+            if (!faceMeshEnabled || !results.multiFaceLandmarks) return;
             
+            faceCount.textContent = results.multiFaceLandmarks.length;
+            drawFaceMesh(results);
+        }
+        
+        // Draw face mesh on canvas
+        function drawFaceMesh(results) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (!results.multiFaceLandmarks) return;
+            
+            // Set canvas size to match video
+            canvas.width = streamImg.width;
+            canvas.height = streamImg.height;
+            
+            // Define face mesh connections for different features
+            const connections = {
+                contour: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
+                leftEye: [33,133,155,154,153,145,144,163,7,173,157,158,159,160,161,246],
+                rightEye: [263,362,387,386,385,384,398,466,388,387,386,385,384,398],
+                lips: [61,146,91,181,84,17,314,405,321,375,291,308,324,318,402,317,14,87,178,88,95]
+            };
+            
+            for (const landmarks of results.multiFaceLandmarks) {
+                // Draw face contour (green)
+                ctx.beginPath();
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < connections.contour.length - 1; i++) {
+                    const p1 = landmarks[connections.contour[i]];
+                    const p2 = landmarks[connections.contour[i + 1]];
+                    if (p1 && p2) {
+                        ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+                        ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+                    }
+                }
+                ctx.stroke();
+                
+                // Draw left eye (magenta)
+                ctx.beginPath();
+                ctx.strokeStyle = '#ff00ff';
+                for (let i = 0; i < connections.leftEye.length - 1; i++) {
+                    const p1 = landmarks[connections.leftEye[i]];
+                    const p2 = landmarks[connections.leftEye[i + 1]];
+                    if (p1 && p2) {
+                        ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+                        ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+                    }
+                }
+                ctx.stroke();
+                
+                // Draw right eye (magenta)
+                ctx.beginPath();
+                for (let i = 0; i < connections.rightEye.length - 1; i++) {
+                    const p1 = landmarks[connections.rightEye[i]];
+                    const p2 = landmarks[connections.rightEye[i + 1]];
+                    if (p1 && p2) {
+                        ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+                        ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+                    }
+                }
+                ctx.stroke();
+                
+                // Draw lips (cyan)
+                ctx.beginPath();
+                ctx.strokeStyle = '#00ffff';
+                for (let i = 0; i < connections.lips.length - 1; i++) {
+                    const p1 = landmarks[connections.lips[i]];
+                    const p2 = landmarks[connections.lips[i + 1]];
+                    if (p1 && p2) {
+                        ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+                        ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+                    }
+                }
+                ctx.stroke();
+                
+                // Draw all mesh points (red)
+                ctx.fillStyle = '#ff0000';
+                for (const point of landmarks) {
+                    ctx.beginPath();
+                    ctx.arc(point.x * canvas.width, point.y * canvas.height, 1, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            }
+        }
+        
+        // Process each frame with face mesh
+        async function processFrame() {
+            if (!streamActive || !streamImg.complete) return;
+            
+            // Update FPS
             frameCount++;
             const now = Date.now();
             if (now - lastFpsUpdate >= 1000) {
-                document.getElementById('fpsDisplay').textContent = frameCount;
+                fps = frameCount;
+                fpsCounter.textContent = fps;
                 frameCount = 0;
                 lastFpsUpdate = now;
             }
             
-            try {
-                await faceMesh.send({ image: streamImg });
-            } catch (error) {}
-            
-            requestAnimationFrame(processFrame);
-        }
-        
-        async function connectWithProxy(useProxy) {
-            const cameraUrl = document.getElementById('cameraUrl').value;
-            await initFaceMesh();
-            
-            // Construct URL with or without proxy
-            let streamUrl;
-            if (useProxy) {
-                streamUrl = PROXY_URL + cameraUrl + '/stream';
-                showStatus('Connecting via proxy...', 'info');
-            } else {
-                streamUrl = cameraUrl + '/stream';
-                showStatus('Connecting directly...', 'info');
+            // Process with face mesh if enabled and loaded
+            if (faceMeshEnabled && isModelLoaded && faceMesh) {
+                try {
+                    await faceMesh.send({ image: streamImg });
+                } catch (error) {
+                    console.error('Face mesh error:', error);
+                }
             }
             
-            streamImg.src = streamUrl + '?t=' + Date.now();
+            // Update stream duration
+            if (streamStartTime) {
+                const duration = Math.floor((now - streamStartTime) / 1000);
+                const minutes = Math.floor(duration / 60);
+                const seconds = duration % 60;
+                streamDuration.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
             
-            streamImg.onload = () => {
-                document.getElementById('videoContainer').style.display = 'block';
-                document.getElementById('statsPanel').style.display = 'flex';
-                canvas.width = streamImg.width;
-                canvas.height = streamImg.height;
-                
-                isStreaming = true;
-                processFrame();
-                showStatus('Connected!', 'success');
-            };
-            
-            streamImg.onerror = () => {
-                showStatus('Failed to connect', 'error');
-            };
+            // Request next frame
+            if (streamActive) {
+                requestAnimationFrame(processFrame);
+            }
         }
         
-        function showStatus(message, type) {
-            const statusDiv = document.getElementById('connectionStatus');
-            statusDiv.style.display = 'block';
-            statusDiv.className = `status ${type}`;
-            statusDiv.textContent = message;
+        // Toggle face mesh
+        function toggleFaceMesh() {
+            faceMeshEnabled = !faceMeshEnabled;
+            toggleMeshBtn.textContent = faceMeshEnabled ? '🔮 Disable Face Mesh' : '🔮 Enable Face Mesh';
+            
+            if (!faceMeshEnabled) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                faceCount.textContent = '0';
+            }
+            
+            debug(`Face mesh ${faceMeshEnabled ? 'enabled' : 'disabled'}`);
         }
+        
+        // Start streaming
+        function startStream() {
+            streamActive = true;
+            frameCount = 0;
+            streamStartTime = Date.now();
+            reconnectAttempts = 0;
+            
+            updateConnectionStatus(true);
+            
+            // Start the stream
+            refreshStream();
+            
+            debug('Starting stream...');
+        }
+        
+        // Stop streaming
+        function stopStream() {
+            streamActive = false;
+            streamImg.src = '';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            updateConnectionStatus(false);
+            debug('Stream stopped');
+        }
+        
+        // Capture still image
+        function captureStill() {
+            stopStream();
+            
+            // Open still image in new window
+            const stillUrl = CAPTURE_URL + '?' + new Date().getTime();
+            window.open(stillUrl, '_blank');
+            
+            debug(`Capturing still image: ${stillUrl}`);
+        }
+        
+        // Refresh/restart stream
+        function refreshStream() {
+            if (!streamActive) {
+                startStream();
+                return;
+            }
+            
+            const timestamp = new Date().getTime();
+            streamImg.src = STREAM_URL + '?' + timestamp;
+            
+            const now = new Date();
+            lastRefresh.textContent = now.toLocaleTimeString();
+            
+            debug(`Stream refreshed at ${now.toLocaleTimeString()}`);
+        }
+        
+        // Update connection status UI
+        function updateConnectionStatus(connected) {
+            if (connected) {
+                connectionLed.className = 'connection-status connected';
+                connectionStatus.textContent = 'Connected';
+                connectionStatus.className = 'badge success';
+            } else {
+                connectionLed.className = 'connection-status disconnected';
+                connectionStatus.textContent = 'Disconnected';
+                connectionStatus.className = 'badge danger';
+            }
+        }
+        
+        // Handle stream errors
+        streamImg.onerror = function() {
+            if (streamActive) {
+                reconnectAttempts++;
+                
+                if (reconnectAttempts <= maxReconnectAttempts) {
+                    debug(`Stream error, reconnecting... (Attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+                    
+                    setTimeout(() => {
+                        if (streamActive) {
+                            refreshStream();
+                        }
+                    }, 2000 * reconnectAttempts);
+                } else {
+                    debug('Max reconnection attempts reached. Please check camera connection.');
+                    stopStream();
+                }
+            }
+        };
+        
+        // Handle successful frame load
+        streamImg.onload = function() {
+            if (!streamActive) return;
+            
+            frameCounter.textContent = parseInt(frameCounter.textContent) + 1;
+            
+            // Start processing loop if not already running
+            processFrame();
+        };
+        
+        // Copy URL to clipboard
+        function copyToClipboard() {
+            const url = document.getElementById('cameraUrl').textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('URL copied to clipboard!');
+            });
+        }
+        
+        // Debug logging
+        function debug(message) {
+            console.log(`[Camera] ${message}`);
+            debugInfo.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+        }
+        
+        // Initialize on page load
+        window.onload = function() {
+            debug(`Camera configured at ${ROOT_URL}`);
+            initFaceMesh();
+            
+            // Test if camera is reachable
+            fetch(ROOT_URL, { method: 'HEAD', mode: 'no-cors' })
+                .then(() => {
+                    debug('Camera is reachable! Click Start Stream to begin.');
+                })
+                .catch(() => {
+                    debug('⚠️ Camera not reachable. Check if ESP32 is powered and on the same network.');
+                });
+        };
+        
+        // Auto-refresh stream every 30 seconds
+        setInterval(() => {
+            if (streamActive) {
+                refreshStream();
+            }
+        }, 30000);
     </script>
 </body>
 </html>
