@@ -4,29 +4,178 @@
     <title>ESP32 Camera Face Mesh</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        /* Add this to your existing styles */
-        .error-details {
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        /* New warning styles */
+        .https-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .https-warning strong {
+            color: #533f03;
+            font-size: 16px;
+        }
+        
+        .solution-box {
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: monospace;
+        }
+        
+        .solution-box code {
+            background: #dee2e6;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .url-input-section {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: 500;
+        }
+        
+        .status.error {
             background: #f8d7da;
             color: #721c24;
-            padding: 15px;
-            border-radius: 5px;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
             margin: 20px 0;
-            font-family: monospace;
-            white-space: pre-wrap;
             display: none;
         }
-        .manual-url {
-            margin-top: 20px;
-            padding: 15px;
-            background: #e9ecef;
-            border-radius: 5px;
-        }
-        .manual-url input {
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            padding: 8px;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        img {
+            width: 100%;
+            display: block;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .model-loading {
+            margin: 20px 0;
+            padding: 20px;
+            background: #e3f2fd;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #ddd;
+            border-radius: 5px;
             margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #4CAF50;
+            width: 0%;
+            transition: width 0.3s;
         }
     </style>
 </head>
@@ -34,20 +183,29 @@
     <div class="container">
         <h1>📹 ESP32 Camera Face Mesh</h1>
         
-        <!-- Add error display -->
-        <div id="errorDetails" class="error-details"></div>
-        
-        <!-- Manual model URL fallback -->
-        <div class="manual-url" id="manualUrl" style="display: none;">
-            <h3>🔧 Manual Model Loading</h3>
-            <p>The model failed to load automatically. Try entering the CDN URL manually:</p>
-            <input type="text" id="modelUrl" value="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.model" readonly>
-            <button onclick="loadModelManually()">Load Model</button>
+        <!-- HTTPS Warning Message -->
+        <div class="https-warning" id="httpsWarning">
+            <strong>⚠️ HTTPS Mixed Content Warning</strong>
+            <p>This page is served over HTTPS, but your ESP32 camera uses HTTP. Browsers block this for security.</p>
+            
+            <div class="solution-box">
+                <strong>🔧 Quick Solutions:</strong>
+                <ol style="margin-top: 10px; margin-bottom: 0;">
+                    <li><strong>Run locally (recommended):</strong>
+                        <br><code>python -m http.server 8000</code>
+                        <br>Then open: <code>http://localhost:8000/detectFace.html</code>
+                    </li>
+                    <li style="margin-top: 10px;"><strong>For Chrome only - temporary fix:</strong>
+                        <br>Click the lock icon 🔒 in address bar → Site settings → Allow insecure content
+                    </li>
+                </ol>
+            </div>
         </div>
         
-        <!-- Rest of your HTML remains the same -->
+        <!-- URL Input Section -->
         <div class="url-input-section">
             <h3>1️⃣ Enter Camera URL</h3>
+            <p style="color: #666; margin-bottom: 10px;">Example: http://192.168.31.214</p>
             <div class="input-group">
                 <input type="text" id="cameraUrl" value="http://192.168.31.214">
                 <button onclick="connectToCamera()" id="connectBtn">Connect</button>
@@ -55,7 +213,7 @@
             <div id="connectionStatus" class="status" style="display: none;"></div>
         </div>
         
-        <!-- Model loading indicator -->
+        <!-- Model Loading -->
         <div class="model-loading" id="modelLoading">
             <div>Loading Face Mesh Model...</div>
             <div class="progress-bar">
@@ -64,14 +222,14 @@
             <div id="modelStatus">Downloading from CDN...</div>
         </div>
         
-        <!-- Video container -->
-        <div class="video-container" id="videoContainer" style="display: none;">
+        <!-- Video Display -->
+        <div class="video-container" id="videoContainer">
             <img id="cameraStream" crossorigin="anonymous">
             <canvas id="overlayCanvas"></canvas>
         </div>
         
-        <!-- Stats -->
-        <div class="stats" id="statsPanel" style="display: none;">
+        <!-- Stats Panel -->
+        <div class="stats" id="statsPanel">
             <div class="stat-item">
                 <div>FPS</div>
                 <div class="stat-value" id="fpsDisplay">0</div>
@@ -80,6 +238,10 @@
                 <div>Faces</div>
                 <div class="stat-value" id="faceCount">0</div>
             </div>
+            <div class="stat-item">
+                <div>Mesh Points</div>
+                <div class="stat-value" id="meshPoints">468</div>
+            </div>
         </div>
     </div>
 
@@ -87,99 +249,165 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
     
     <script>
-        // Enhanced error handling
-        window.addEventListener('error', function(e) {
-            const errorDiv = document.getElementById('errorDetails');
-            errorDiv.style.display = 'block';
-            errorDiv.innerHTML += `<strong>Error:</strong> ${e.message}<br>`;
-            errorDiv.innerHTML += `<strong>File:</strong> ${e.filename}<br>`;
-            errorDiv.innerHTML += `<strong>Line:</strong> ${e.lineno}<br><br>`;
-            
-            // Show manual URL option
-            document.getElementById('manualUrl').style.display = 'block';
-        });
-
-        // Manual model loading function
-        async function loadModelManually() {
-            const modelUrl = document.getElementById('modelUrl').value;
-            document.getElementById('modelStatus').textContent = 'Loading manually...';
-            
-            try {
-                const response = await fetch(modelUrl);
-                if (response.ok) {
-                    document.getElementById('modelStatus').textContent = 'Model loaded!';
-                    setTimeout(() => {
-                        document.getElementById('modelLoading').style.display = 'none';
-                    }, 500);
-                    initFaceMesh();
-                }
-            } catch (error) {
-                document.getElementById('errorDetails').innerHTML += 
-                    `<strong>Manual load failed:</strong> ${error.message}<br>`;
-            }
+        // Check if page is HTTPS
+        if (window.location.protocol === 'https:') {
+            console.warn('⚠️ Page loaded with HTTPS. Camera connection may fail.');
         }
-
-        // Rest of your existing JavaScript with added error handling
+        
         let faceMesh = null;
-        let isModelLoaded = false;
-
+        let streamImg = document.getElementById('cameraStream');
+        let canvas = document.getElementById('overlayCanvas');
+        let ctx = canvas.getContext('2d');
+        let isStreaming = false;
+        let frameCount = 0;
+        let lastFpsUpdate = Date.now();
+        
+        // Initialize Face Mesh
         async function initFaceMesh() {
+            document.getElementById('modelLoading').style.display = 'block';
+            
             try {
                 faceMesh = new FaceMesh({
                     locateFile: (file) => {
-                        console.log('Loading file:', file);
+                        console.log('Loading:', file);
                         return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`;
                     }
                 });
-
+                
                 faceMesh.setOptions({
                     maxNumFaces: 3,
                     refineLandmarks: true,
                     minDetectionConfidence: 0.5,
                     minTrackingConfidence: 0.5
                 });
-
+                
                 faceMesh.onResults(onFaceMeshResults);
                 
-                // Update progress
+                // Simulate progress
                 let progress = 0;
                 const interval = setInterval(() => {
                     progress += 10;
                     document.getElementById('modelProgress').style.width = progress + '%';
                     if (progress >= 100) {
                         clearInterval(interval);
-                        isModelLoaded = true;
+                        document.getElementById('modelStatus').textContent = 'Model loaded!';
+                        setTimeout(() => {
+                            document.getElementById('modelLoading').style.display = 'none';
+                        }, 500);
                     }
-                }, 300);
+                }, 200);
                 
             } catch (error) {
-                document.getElementById('errorDetails').style.display = 'block';
-                document.getElementById('errorDetails').innerHTML += 
-                    `<strong>FaceMesh init failed:</strong> ${error.message}<br>`;
+                console.error('FaceMesh init error:', error);
+                document.getElementById('modelStatus').textContent = 'Failed to load model';
             }
         }
-
+        
         function onFaceMeshResults(results) {
-            // Your existing face mesh results handler
             if (results.multiFaceLandmarks) {
                 document.getElementById('faceCount').textContent = results.multiFaceLandmarks.length;
-                // Add your drawing code here
+                drawFaceMesh(results);
             }
         }
-
-        // Initialize on page load
-        window.onload = function() {
-            console.log('Page loaded, checking MediaPipe...');
-            if (typeof FaceMesh !== 'undefined') {
-                console.log('FaceMesh library loaded successfully');
-                initFaceMesh();
-            } else {
-                document.getElementById('errorDetails').style.display = 'block';
-                document.getElementById('errorDetails').innerHTML = 
-                    '❌ FaceMesh library failed to load. Check network connection.';
-                document.getElementById('manualUrl').style.display = 'block';
+        
+        function drawFaceMesh(results) {
+            if (!ctx || !results.multiFaceLandmarks) return;
+            
+            canvas.width = streamImg.width;
+            canvas.height = streamImg.height;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+            
+            for (const landmarks of results.multiFaceLandmarks) {
+                // Draw simplified mesh
+                ctx.beginPath();
+                for (let i = 0; i < landmarks.length; i += 15) {
+                    const point = landmarks[i];
+                    if (i === 0) {
+                        ctx.moveTo(point.x * canvas.width, point.y * canvas.height);
+                    } else {
+                        ctx.lineTo(point.x * canvas.width, point.y * canvas.height);
+                    }
+                }
+                ctx.stroke();
+                
+                // Draw key points
+                ctx.fillStyle = '#ff0000';
+                for (let i = 0; i < landmarks.length; i += 30) {
+                    const point = landmarks[i];
+                    ctx.beginPath();
+                    ctx.arc(point.x * canvas.width, point.y * canvas.height, 2, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
             }
-        };
+        }
+        
+        async function processFrame() {
+            if (!isStreaming || !faceMesh || !streamImg.complete) return;
+            
+            // Update FPS
+            frameCount++;
+            const now = Date.now();
+            if (now - lastFpsUpdate >= 1000) {
+                document.getElementById('fpsDisplay').textContent = frameCount;
+                frameCount = 0;
+                lastFpsUpdate = now;
+            }
+            
+            try {
+                await faceMesh.send({ image: streamImg });
+            } catch (error) {
+                console.error('Process error:', error);
+            }
+            
+            requestAnimationFrame(processFrame);
+        }
+        
+        function connectToCamera() {
+            const cameraUrl = document.getElementById('cameraUrl').value.trim();
+            
+            if (!cameraUrl) {
+                showStatus('Please enter camera URL', 'error');
+                return;
+            }
+            
+            showStatus('Connecting...', 'error');
+            
+            // Check if we're on HTTPS and warn
+            if (window.location.protocol === 'https:') {
+                showStatus('⚠️ HTTPS detected! Camera may not connect. Use local HTTP server.', 'error');
+                return;
+            }
+            
+            // Initialize model
+            initFaceMesh();
+            
+            // Set up stream
+            streamImg.src = `${cameraUrl}/stream?t=${Date.now()}`;
+            streamImg.onload = () => {
+                document.getElementById('videoContainer').style.display = 'block';
+                document.getElementById('statsPanel').style.display = 'flex';
+                canvas.width = streamImg.width;
+                canvas.height = streamImg.height;
+                
+                isStreaming = true;
+                processFrame();
+                showStatus('Connected!', 'success');
+            };
+            
+            streamImg.onerror = () => {
+                showStatus('Failed to load stream', 'error');
+            };
+        }
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
     </script>
 </body>
 </html>
