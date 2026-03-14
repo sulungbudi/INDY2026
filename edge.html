@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32 Camera - Canvas Edge Detection</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { margin:0; background:#000; text-align:center; color:white; }
+        .container { position:relative; display:inline-block; }
+        canvas { width:100%; max-width:640px; border:2px solid #333; }
+        #original { display:none; }
+        .controls { position:fixed; bottom:20px; left:0; right:0; background:rgba(0,0,0,0.8); padding:15px; }
+        button { padding:10px 20px; margin:5px; cursor:pointer; }
+        .active { background:#4CAF50; color:white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img id="original" crossorigin="anonymous">
+        <canvas id="edgeCanvas"></canvas>
+    </div>
+    
+    <div class="controls">
+        <button id="edgeBtn" class="active" onclick="toggleEdge()">Edge Detection: ON</button>
+        <button onclick="toggleMode()">Toggle View</button>
+        <input type="range" id="threshold" min="20" max="200" value="80" onchange="updateThreshold(this.value)">
+        <span>Threshold: <span id="threshVal">80</span></span>
+    </div>
+
+    <script>
+        const originalImg = document.getElementById('original');
+        const canvas = document.getElementById('edgeCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let edgeEnabled = true;
+        let showOriginal = false;
+        let threshold = 80;
+        let streamActive = true;
+        let frameCount = 0;
+        
+        const STREAM_URL = 'http://192.168.31.214/stream';
+        
+        // Sobel edge detection
+        function applySobelEdgeDetection(imageData, threshold) {
+            const width = imageData.width;
+            const height = imageData.height;
+            const data = imageData.data;
+            const output = new Uint8ClampedArray(data.length);
+            
+            // Grayscale conversion and edge detection
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const idx = (y * width + x) * 4;
+                    
+                    // Get grayscale values of 3x3 neighborhood
+                    const gx = [];
+                    const gy = [];
+                    
+                    // Sobel kernels
+                    const sobelX = [
+                        [-1, 0, 1],
+                        [-2, 0, 2],
+                        [-1, 0, 1]
+                    ];
+                    
+                    const sobelY = [
+                        [-1, -2, -1],
+                        [0, 0, 0],
+                        [1, 2, 1]
+                    ];
+                    
+                    let sumX = 0;
+                    let sumY = 0;
+                    
+                    // Apply Sobel kernels
+                    for (let ky = -1; ky <= 1; ky++) {
+                        for (let kx = -1; kx <= 1; kx++) {
+                            const pixelIdx = ((y + ky) * width + (x + kx)) * 4;
+                            // Use green channel for grayscale approximation
+                            const gray = data[pixelIdx + 1]; 
+                            
+                            sumX += gray * sobelX[ky + 1][kx + 1];
+                            sumY += gray * sobelY[ky + 1][kx + 1];
+                        }
+                    }
+                    
+                    // Calculate magnitude
+                    const magnitude = Math.sqrt(sumX * sumX + sumY * sumY);
+                    
+                    // Apply threshold
+                    const edge = magnitude > threshold ? 255 : 0;
+                    
+                    // Set output pixel
+                    output[idx] = edge;
+                    output[idx + 1] = edge;
+                    output[idx + 2] = edge;
+                    output[idx + 3] = 255;
+                }
+            }
+            
+            // Handle borders
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    if (x === 0 || y === 0 || x === width - 1 || y === height - 1) {
+                        const idx = (y * width + x) * 4;
+                        output[idx] = 0;
+                        output[idx + 1] = 0;
+                        output[idx + 2] = 0;
+                        output[idx + 3] = 255;
+                    }
+                }
+            }
+            
+            return new ImageData(output, width, height);
+        }
+        
+        // Simple Laplacian edge detection (faster)
+        function applyLaplacianEdgeDetection(imageData, threshold) {
+            const width = imageData.width;
+            const height = imageData.height;
+            const data = imageData.data;
+            const output = new Uint8ClampedArray(data.length);
+            
+            const laplacian = [
+                [-1, -1, -1],
+                [-1, 8, -1],
+                [-1, -1, -1]
+            ];
+            
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    let sum = 0;
+                    
+                    for (let ky = -1; ky <= 1; ky++) {
+                        for (let kx = -1; kx <= 1; kx++) {
+                            const pixelIdx = ((y + ky) * width + (x + kx)) * 4;
+                            const gray = (data[pixelIdx] + data[pixelIdx + 1] + data[pixelIdx + 2]) / 3;
+                            sum += gray * laplacian[ky + 1][kx + 1];
+                        }
+                    }
+                    
+                    const edge = Math.abs(sum) > threshold ? 255 : 0;
+                    const idx = (y * width + x) * 4;
+                    
+                    output[idx] = edge;
+                    output[idx + 1] = edge;
+                    output[idx + 2] = edge;
+                    output[idx + 3] = 255;
+                }
+            }
+            
+            return new ImageData(output, width, height);
+        }
+        
+        // Process each frame
+        function processFrame() {
+            if (!streamActive) return;
+            
+            // Set canvas size to match image
+            if (originalImg.complete && originalImg.naturalWidth) {
+                canvas.width = originalImg.naturalWidth;
+                canvas.height = originalImg.naturalHeight;
+                
+                // Draw original image to canvas
+                ctx.drawImage(originalImg, 0, 0, canvas.width, canvas.height);
+                
+                if (edgeEnabled) {
+                    // Get image data and apply edge detection
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const edgeData = applyLaplacianEdgeDetection(imageData, threshold);
+                    ctx.putImageData(edgeData, 0, 0);
+                }
+                // If showOriginal is true, we keep the original (already drawn)
+                
+                frameCount++;
+            }
+            
+            // Request next frame
+            if (streamActive) {
+                originalImg.src = STREAM_URL + '?t=' + Date.now();
+            }
+        }
+        
+        // Toggle edge detection
+        function toggleEdge() {
+            edgeEnabled = !edgeEnabled;
+            document.getElementById('edgeBtn').innerHTML = 
+                edgeEnabled ? 'Edge Detection: ON' : 'Edge Detection: OFF';
+            document.getElementById('edgeBtn').className = edgeEnabled ? 'active' : '';
+        }
+        
+        // Toggle between original and edge view
+        function toggleMode() {
+            showOriginal = !showOriginal;
+        }
+        
+        // Update threshold
+        function updateThreshold(val) {
+            threshold = parseInt(val);
+            document.getElementById('threshVal').innerHTML = threshold;
+        }
+        
+        // Start/stop stream
+        function startStream() {
+            streamActive = true;
+            originalImg.src = STREAM_URL + '?t=' + Date.now();
+        }
+        
+        function stopStream() {
+            streamActive = false;
+            originalImg.src = '';
+        }
+        
+        // Event handlers
+        originalImg.onload = processFrame;
+        originalImg.onerror = function() {
+            console.log('Stream error, reconnecting...');
+            if (streamActive) {
+                setTimeout(() => {
+                    originalImg.src = STREAM_URL + '?t=' + Date.now();
+                }, 1000);
+            }
+        };
+        
+        // Auto-start
+        window.onload = startStream;
+    </script>
+</body>
+</html>
