@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32 Camera Face Mesh</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+        
+        h1 small {
+            display: block;
+            font-size: 0.5em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .url-input-section {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: none;
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        img {
+            width: 100%;
+            display: block;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            min-width: 120px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .options {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .option-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        
+        .option-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .model-loading {
+            margin: 20px 0;
+            padding: 20px;
+            background: #e3f2fd;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #ddd;
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #4CAF50;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .face-count-badge {
+            background: #4CAF50;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        
+        @media (max-width: 600px) {
+            .input-group {
+                flex-direction: column;
+            }
+            
+            .stats {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .stat-item {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            📹 ESP32 Camera Face Mesh
+            <small>RHYX M21-45 / OV3660</small>
+        </h1>
+        
+        <!-- URL Input Section -->
+        <div class="url-input-section">
+            <h3 style="margin-bottom: 10px;">1️⃣ Enter Camera URL</h3>
+            <p style="color: #666; margin-bottom: 10px;">Example: http://192.168.31.214</p>
+            <div class="input-group">
+                <input type="text" id="cameraUrl" placeholder="http://192.168.1.100" value="http://192.168.31.214">
+                <button onclick="connectToCamera()" id="connectBtn">Connect</button>
+            </div>
+            <div id="connectionStatus" class="status" style="display: none;"></div>
+        </div>
+        
+        <!-- Model Loading Progress -->
+        <div class="model-loading" id="modelLoading">
+            <div>Loading Face Mesh Model...</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="modelProgress"></div>
+            </div>
+            <div id="modelStatus">Downloading from CDN...</div>
+        </div>
+        
+        <!-- Video Display -->
+        <div class="video-container" id="videoContainer">
+            <img id="cameraStream" crossorigin="anonymous">
+            <canvas id="overlayCanvas"></canvas>
+        </div>
+        
+        <!-- Stats Panel -->
+        <div class="stats" id="statsPanel" style="display: none;">
+            <div class="stat-item">
+                <div class="stat-label">FPS</div>
+                <div class="stat-value" id="fpsDisplay">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Faces Detected</div>
+                <div class="stat-value" id="faceCount">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Mesh Points</div>
+                <div class="stat-value" id="meshPoints">468</div>
+            </div>
+        </div>
+        
+        <!-- Options Panel -->
+        <div class="options" id="optionsPanel" style="display: none;">
+            <label class="option-checkbox">
+                <input type="checkbox" id="showMesh" checked> Show Face Mesh
+            </label>
+            <label class="option-checkbox">
+                <input type="checkbox" id="showContour" checked> Show Contour
+            </label>
+            <label class="option-checkbox">
+                <input type="checkbox" id="showEyes" checked> Show Eyes
+            </label>
+            <label class="option-checkbox">
+                <input type="checkbox" id="showLips" checked> Show Lips
+            </label>
+            <label class="option-checkbox">
+                <input type="checkbox" id="autoRefresh" checked> Auto-Refresh
+            </label>
+        </div>
+    </div>
+
+    <!-- MediaPipe Face Mesh Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+    
+    <script>
+        // Global variables
+        let cameraUrl = '';
+        let streamImg = document.getElementById('cameraStream');
+        let canvas = document.getElementById('overlayCanvas');
+        let ctx = canvas.getContext('2d');
+        let faceMesh = null;
+        let isModelLoaded = false;
+        let isStreaming = false;
+        let frameCount = 0;
+        let lastFpsUpdate = Date.now();
+        let fps = 0;
+        let detectionResults = null;
+        
+        // FPS counter
+        function updateFPS() {
+            frameCount++;
+            const now = Date.now();
+            if (now - lastFpsUpdate >= 1000) {
+                fps = frameCount;
+                document.getElementById('fpsDisplay').textContent = fps;
+                frameCount = 0;
+                lastFpsUpdate = now;
+            }
+        }
+        
+        // Initialize Face Mesh
+        async function initFaceMesh() {
+            document.getElementById('modelLoading').style.display = 'block';
+            
+            faceMesh = new FaceMesh({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`;
+                }
+            });
+            
+            faceMesh.setOptions({
+                maxNumFaces: 3,
+                refineLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            
+            faceMesh.onResults(onFaceMeshResults);
+            
+            // Simulate progress (actual loading is async)
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                document.getElementById('modelProgress').style.width = progress + '%';
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    document.getElementById('modelStatus').textContent = 'Model loaded!';
+                    setTimeout(() => {
+                        document.getElementById('modelLoading').style.display = 'none';
+                    }, 500);
+                }
+            }, 200);
+            
+            isModelLoaded = true;
+        }
+        
+        // Handle face mesh results
+        function onFaceMeshResults(results) {
+            detectionResults = results;
+            
+            if (!results.image || !results.multiFaceLandmarks) return;
+            
+            // Update face count
+            document.getElementById('faceCount').textContent = results.multiFaceLandmarks.length;
+            
+            // Draw on canvas
+            drawFaceMesh(results);
+        }
+        
+        // Draw face mesh on canvas
+        function drawFaceMesh(results) {
+            if (!ctx || !results.multiFaceLandmarks) return;
+            
+            // Set canvas dimensions
+            canvas.width = streamImg.width;
+            canvas.height = streamImg.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Check what to draw
+            const showMesh = document.getElementById('showMesh').checked;
+            const showContour = document.getElementById('showContour').checked;
+            const showEyes = document.getElementById('showEyes').checked;
+            const showLips = document.getElementById('showLips').checked;
+            
+            if (!showMesh && !showContour && !showEyes && !showLips) return;
+            
+            // Define face mesh connections [citation:2]
+            const connections = {
+                contour: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
+                leftEye: [33,133,155,154,153,145,144,163,7,173,157,158,159,160,161,246],
+                rightEye: [263,362,387,386,385,384,398,466,388,387,386,385,384,398],
+                lips: [61,146,91,181,84,17,314,405,321,375,291,308,324,318,402,317,14,87,178,88,95]
+            };
+            
+            // Draw for each face
+            for (const landmarks of results.multiFaceLandmarks) {
+                ctx.save();
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 2;
+                
+                // Draw contour
+                if (showContour) {
+                    ctx.beginPath();
+                    for (let i = 0; i < connections.contour.length - 1; i++) {
+                        const p1 = landmarks[connections.contour[i]];
+                        const p2 = landmarks[connections.contour[i + 1]];
+                        if (p1 && p2) {
+                            ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+                            ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+                        }
+                    }
+                    ctx.strokeStyle = '#00ff00';
+                    ctx.stroke();
+                }
+                
+                // Draw left eye
+                if (showEyes) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#ff00ff';
+                    for (let i = 0; i < connections.leftEye.length - 1; i++) {
+                        const p1 = landmarks[connections.leftEye[i]];
+                        const p2 = landmarks[connections.leftEye[i + 1]];
+                        if (p1 && p2) {
+                            ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+                            ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+                        }
+                    }
+                    ctx.stroke();
+                    
+                    // Draw right eye
+                    ctx.beginPath();
+                    for (let i = 0; i < connections.rightEye.length - 1; i++) {
+                        const p1 = landmarks[connections.rightEye[i]];
+                        const p2 = landmarks[connections.rightEye[i + 1]];
+                        if (p1 && p2) {
+                            ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+                            ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+                        }
+                    }
+                    ctx.stroke();
+                }
+                
+                // Draw lips
+                if (showLips) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#00ffff';
+                    for (let i = 0; i < connections.lips.length - 1; i++) {
+                        const p1 = landmarks[connections.lips[i]];
+                        const p2 = landmarks[connections.lips[i + 1]];
+                        if (p1 && p2) {
+                            ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+                            ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+                        }
+                    }
+                    ctx.stroke();
+                }
+                
+                // Draw all mesh points if requested
+                if (showMesh) {
+                    ctx.fillStyle = '#ff0000';
+                    for (const point of landmarks) {
+                        ctx.beginPath();
+                        ctx.arc(point.x * canvas.width, point.y * canvas.height, 2, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                }
+                
+                ctx.restore();
+            }
+        }
+        
+        // Process frame with Face Mesh
+        async function processFrame() {
+            if (!isStreaming || !isModelLoaded || !faceMesh || !streamImg.complete) return;
+            
+            updateFPS();
+            
+            try {
+                await faceMesh.send({ image: streamImg });
+            } catch (error) {
+                console.error('Face mesh error:', error);
+            }
+            
+            if (document.getElementById('autoRefresh').checked) {
+                requestAnimationFrame(processFrame);
+            }
+        }
+        
+        // Connect to camera
+        async function connectToCamera() {
+            const urlInput = document.getElementById('cameraUrl');
+            cameraUrl = urlInput.value.trim();
+            
+            if (!cameraUrl) {
+                showStatus('Please enter a camera URL', 'error');
+                return;
+            }
+            
+            // Remove trailing slash if present
+            if (cameraUrl.endsWith('/')) {
+                cameraUrl = cameraUrl.slice(0, -1);
+            }
+            
+            showStatus(`Connecting to ${cameraUrl}...`, 'info');
+            document.getElementById('connectBtn').disabled = true;
+            
+            // Test connection
+            try {
+                const testUrl = `${cameraUrl}/stream`;
+                const response = await fetch(testUrl, { method: 'HEAD', mode: 'no-cors' });
+                
+                // Initialize Face Mesh if not already done
+                if (!isModelLoaded) {
+                    await initFaceMesh();
+                }
+                
+                // Set up stream
+                streamImg.src = `${cameraUrl}/stream?t=${Date.now()}`;
+                streamImg.onload = () => {
+                    document.getElementById('videoContainer').style.display = 'block';
+                    document.getElementById('statsPanel').style.display = 'flex';
+                    document.getElementById('optionsPanel').style.display = 'flex';
+                    
+                    isStreaming = true;
+                    showStatus('Connected! Processing video...', 'success');
+                    
+                    // Start processing
+                    processFrame();
+                };
+                
+                streamImg.onerror = () => {
+                    showStatus('Failed to load stream. Check URL and camera power.', 'error');
+                    document.getElementById('connectBtn').disabled = false;
+                };
+                
+            } catch (error) {
+                showStatus(`Connection failed: ${error.message}`, 'error');
+                document.getElementById('connectBtn').disabled = false;
+            }
+        }
+        
+        // Show status message
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+        
+        // Handle image resize
+        streamImg.addEventListener('load', () => {
+            canvas.width = streamImg.width;
+            canvas.height = streamImg.height;
+        });
+        
+        // Initialize on page load
+        window.onload = () => {
+            // Pre-fill with common IP
+            document.getElementById('cameraUrl').value = 'http://192.168.31.214';
+        };
+    </script>
+</body>
+</html>
