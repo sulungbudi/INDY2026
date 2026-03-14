@@ -26,14 +26,45 @@
             margin-bottom: 20px;
         }
         
-        h1 small {
-            display: block;
-            font-size: 0.5em;
-            color: #666;
-            margin-top: 5px;
+        /* Warning Box */
+        .warning-box {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
         }
         
-        /* URL Input Section */
+        .warning-box h3 {
+            margin-top: 0;
+            color: #533f03;
+        }
+        
+        .solution-steps {
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+        }
+        
+        .solution-steps code {
+            background: #dee2e6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: block;
+            margin: 10px 0;
+        }
+        
+        /* Proxy toggle */
+        .proxy-toggle {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 8px;
+        }
+        
         .url-section {
             background: #f5f5f5;
             border-radius: 10px;
@@ -41,57 +72,11 @@
             margin-bottom: 20px;
         }
         
-        .hardcoded-url {
-            background: #e3f2fd;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid #2196F3;
-        }
-        
-        .hardcoded-url code {
-            background: #fff;
-            padding: 8px 15px;
-            border-radius: 20px;
-            display: inline-block;
-            margin: 10px 0;
-            font-size: 16px;
-            border: 1px solid #2196F3;
-            color: #1976D2;
-        }
-        
-        .url-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-        
-        .url-preset {
-            background: #fff;
-            border: 2px solid #4CAF50;
-            color: #4CAF50;
-            padding: 10px 20px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-        
-        .url-preset:hover {
-            background: #4CAF50;
-            color: white;
-        }
-        
-        .url-preset.active {
-            background: #4CAF50;
-            color: white;
-        }
-        
         .input-group {
             display: flex;
             gap: 10px;
             margin-top: 10px;
+            flex-wrap: wrap;
         }
         
         input {
@@ -102,11 +87,6 @@
             font-size: 16px;
         }
         
-        input:focus {
-            outline: none;
-            border-color: #4CAF50;
-        }
-        
         button {
             padding: 12px 24px;
             background: #4CAF50;
@@ -114,42 +94,27 @@
             border: none;
             border-radius: 8px;
             font-size: 16px;
-            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
         }
         
-        button:hover {
-            background: #45a049;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
-        }
-        
-        button.secondary {
-            background: #2196F3;
-        }
-        
-        button.secondary:hover {
-            background: #1976D2;
+        button.proxy-btn {
+            background: #ff9800;
         }
         
         .status {
             margin: 10px 0;
             padding: 10px;
             border-radius: 5px;
-            font-weight: 500;
-        }
-        
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
         }
         
         .status.error {
             background: #f8d7da;
             color: #721c24;
-            border: 1px solid #f5c6cb;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
         }
         
         .video-container {
@@ -183,103 +148,50 @@
             background: #f8f9fa;
             border-radius: 10px;
             display: none;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        
-        .stat-item {
-            text-align: center;
-            min-width: 100px;
-        }
-        
-        .stat-label {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #4CAF50;
-        }
-        
-        .model-loading {
-            margin: 20px 0;
-            padding: 20px;
-            background: #e3f2fd;
-            border-radius: 10px;
-            text-align: center;
-            display: none;
-        }
-        
-        .progress-bar {
-            width: 100%;
-            height: 10px;
-            background: #ddd;
-            border-radius: 5px;
-            margin: 10px 0;
-            overflow: hidden;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: #4CAF50;
-            width: 0%;
-            transition: width 0.3s;
-        }
-        
-        .note {
-            font-size: 12px;
-            color: #888;
-            margin-top: 10px;
-            text-align: center;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>
-            📹 ESP32 Camera Face Mesh
-            <small>RHYX M21-45 / OV3660</small>
-        </h1>
+        <h1>📹 ESP32 Camera Face Mesh</h1>
         
-        <!-- Hardcoded URL Section (always works) -->
-        <div class="hardcoded-url">
-            <strong>✅ Working Preset (Hardcoded - No CORS Issues)</strong>
-            <div>
-                <code>http://192.168.31.214</code>
+        <!-- Clear warning and solution -->
+        <div class="warning-box">
+            <h3>⚠️ HTTPS Blocking Camera Connection</h3>
+            <p>GitHub Pages uses HTTPS, but your camera uses HTTP. Browsers block this for security.</p>
+            
+            <div class="solution-steps">
+                <strong>✅ Solution 1 (Recommended - Will Work):</strong>
+                <code>python -m http.server 8000</code>
+                Then open: <code>http://localhost:8000/detectFace.html</code>
             </div>
-            <button onclick="connectWithHardcodedUrl()" class="secondary" id="hardcodedBtn">
-                Connect with Hardcoded URL
-            </button>
+            
+            <div class="solution-steps">
+                <strong>⚠️ Solution 2 (CORS Proxy - May Work):</strong>
+                Try the proxy option below.
+            </div>
         </div>
         
-        <!-- URL Input Section -->
+        <!-- Proxy toggle -->
+        <div class="proxy-toggle">
+            <label style="display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" id="useProxy" onclick="toggleProxy()">
+                <strong>Use CORS Proxy (slower, but may work on HTTPS)</strong>
+            </label>
+            <p style="font-size: 12px; color: #666; margin-top: 5px;">
+                Proxy: https://cors-anywhere.herokuapp.com/
+            </p>
+        </div>
+        
+        <!-- URL Section -->
         <div class="url-section">
-            <h3>🔄 Try Different URL (May have CORS issues)</h3>
-            <p style="color: #666; margin-bottom: 10px;">Enter your camera IP address:</p>
-            
-            <div class="url-buttons">
-                <div class="url-preset" onclick="setUrl('http://192.168.31.214')">192.168.31.214</div>
-                <div class="url-preset" onclick="setUrl('http://192.168.1.100')">192.168.1.100</div>
-                <div class="url-preset" onclick="setUrl('http://192.168.0.101')">192.168.0.101</div>
-            </div>
-            
+            <h3>Camera URL: http://192.168.31.214</h3>
             <div class="input-group">
-                <input type="text" id="cameraUrl" placeholder="http://192.168.1.100" value="http://192.168.31.214">
-                <button onclick="connectToCamera()" id="connectBtn">Connect</button>
+                <input type="text" id="cameraUrl" value="http://192.168.31.214" readonly>
+                <button onclick="connectWithProxy(false)" id="directBtn">Connect Direct</button>
+                <button onclick="connectWithProxy(true)" id="proxyBtn" class="proxy-btn">Connect via Proxy</button>
             </div>
             <div id="connectionStatus" class="status" style="display: none;"></div>
-        </div>
-        
-        <!-- Model Loading -->
-        <div class="model-loading" id="modelLoading">
-            <div>Loading Face Mesh Model...</div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="modelProgress"></div>
-            </div>
-            <div id="modelStatus">Downloading from CDN...</div>
         </div>
         
         <!-- Video Display -->
@@ -288,100 +200,66 @@
             <canvas id="overlayCanvas"></canvas>
         </div>
         
-        <!-- Stats Panel -->
+        <!-- Stats -->
         <div class="stats" id="statsPanel">
             <div class="stat-item">
-                <div class="stat-label">FPS</div>
+                <div>FPS</div>
                 <div class="stat-value" id="fpsDisplay">0</div>
             </div>
             <div class="stat-item">
-                <div class="stat-label">Faces</div>
+                <div>Faces</div>
                 <div class="stat-value" id="faceCount">0</div>
             </div>
-            <div class="stat-item">
-                <div class="stat-label">Mesh Points</div>
-                <div class="stat-value" id="meshPoints">468</div>
-            </div>
-        </div>
-        
-        <div class="note">
-            ℹ️ Hardcoded URL works reliably. Dynamic URL entry may be blocked by browser security.
         </div>
     </div>
 
-    <!-- MediaPipe Face Mesh Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+    <!-- MediaPipe -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
     
     <script>
-        // Global variables
-        let cameraUrl = 'http://192.168.31.214';
+        const PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
+        let useProxy = false;
+        let faceMesh = null;
         let streamImg = document.getElementById('cameraStream');
         let canvas = document.getElementById('overlayCanvas');
         let ctx = canvas.getContext('2d');
-        let faceMesh = null;
         let isStreaming = false;
         let frameCount = 0;
         let lastFpsUpdate = Date.now();
         
-        // Initialize Face Mesh
-        async function initFaceMesh() {
-            document.getElementById('modelLoading').style.display = 'block';
-            
-            try {
-                faceMesh = new FaceMesh({
-                    locateFile: (file) => {
-                        console.log('Loading:', file);
-                        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`;
-                    }
-                });
-                
-                faceMesh.setOptions({
-                    maxNumFaces: 3,
-                    refineLandmarks: true,
-                    minDetectionConfidence: 0.5,
-                    minTrackingConfidence: 0.5
-                });
-                
-                faceMesh.onResults(onFaceMeshResults);
-                
-                // Simulate progress
-                let progress = 0;
-                const interval = setInterval(() => {
-                    progress += 10;
-                    document.getElementById('modelProgress').style.width = progress + '%';
-                    if (progress >= 100) {
-                        clearInterval(interval);
-                        document.getElementById('modelStatus').textContent = 'Model loaded!';
-                        setTimeout(() => {
-                            document.getElementById('modelLoading').style.display = 'none';
-                        }, 500);
-                    }
-                }, 200);
-                
-            } catch (error) {
-                console.error('FaceMesh error:', error);
-            }
+        function toggleProxy() {
+            useProxy = document.getElementById('useProxy').checked;
+            showStatus(`Proxy ${useProxy ? 'enabled' : 'disabled'}`, 'info');
         }
         
-        function onFaceMeshResults(results) {
-            if (results.multiFaceLandmarks) {
-                document.getElementById('faceCount').textContent = results.multiFaceLandmarks.length;
-                drawFaceMesh(results);
-            }
+        // Initialize Face Mesh
+        async function initFaceMesh() {
+            faceMesh = new FaceMesh({
+                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`
+            });
+            
+            faceMesh.setOptions({
+                maxNumFaces: 3,
+                refineLandmarks: true,
+                minDetectionConfidence: 0.5
+            });
+            
+            faceMesh.onResults((results) => {
+                if (results.multiFaceLandmarks) {
+                    document.getElementById('faceCount').textContent = results.multiFaceLandmarks.length;
+                    drawFaceMesh(results);
+                }
+            });
         }
         
         function drawFaceMesh(results) {
-            if (!ctx || !results.multiFaceLandmarks) return;
-            
-            canvas.width = streamImg.width;
-            canvas.height = streamImg.height;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (!results.multiFaceLandmarks) return;
             
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 2;
             
             for (const landmarks of results.multiFaceLandmarks) {
-                // Draw simplified mesh
                 ctx.beginPath();
                 for (let i = 0; i < landmarks.length; i += 15) {
                     const point = landmarks[i];
@@ -392,22 +270,12 @@
                     }
                 }
                 ctx.stroke();
-                
-                // Draw key points
-                ctx.fillStyle = '#ff0000';
-                for (let i = 0; i < landmarks.length; i += 30) {
-                    const point = landmarks[i];
-                    ctx.beginPath();
-                    ctx.arc(point.x * canvas.width, point.y * canvas.height, 2, 0, 2 * Math.PI);
-                    ctx.fill();
-                }
             }
         }
         
         async function processFrame() {
             if (!isStreaming || !faceMesh || !streamImg.complete) return;
             
-            // Update FPS
             frameCount++;
             const now = Date.now();
             if (now - lastFpsUpdate >= 1000) {
@@ -418,53 +286,26 @@
             
             try {
                 await faceMesh.send({ image: streamImg });
-            } catch (error) {
-                console.error('Process error:', error);
-            }
+            } catch (error) {}
             
             requestAnimationFrame(processFrame);
         }
         
-        // Set URL from preset buttons
-        function setUrl(url) {
-            document.getElementById('cameraUrl').value = url;
-        }
-        
-        // Connect with hardcoded URL (always works)
-        function connectWithHardcodedUrl() {
-            cameraUrl = 'http://192.168.31.214';
-            document.getElementById('hardcodedBtn').disabled = true;
-            document.getElementById('hardcodedBtn').textContent = 'Connecting...';
-            performConnection(cameraUrl);
-        }
-        
-        // Connect with user-entered URL (may have CORS issues)
-        function connectToCamera() {
-            const inputUrl = document.getElementById('cameraUrl').value.trim();
-            if (!inputUrl) {
-                showStatus('Please enter a URL', 'error');
-                return;
-            }
-            
-            cameraUrl = inputUrl;
-            document.getElementById('connectBtn').disabled = true;
-            document.getElementById('connectBtn').textContent = 'Connecting...';
-            performConnection(cameraUrl);
-        }
-        
-        // Common connection function
-        async function performConnection(url) {
-            showStatus('Connecting...', 'error');
-            
-            // Initialize model
+        async function connectWithProxy(useProxy) {
+            const cameraUrl = document.getElementById('cameraUrl').value;
             await initFaceMesh();
             
-            // Test connection
-            const testUrl = `${url}/stream`;
-            console.log('Connecting to:', testUrl);
+            // Construct URL with or without proxy
+            let streamUrl;
+            if (useProxy) {
+                streamUrl = PROXY_URL + cameraUrl + '/stream';
+                showStatus('Connecting via proxy...', 'info');
+            } else {
+                streamUrl = cameraUrl + '/stream';
+                showStatus('Connecting directly...', 'info');
+            }
             
-            // Set up stream
-            streamImg.src = testUrl + '?t=' + Date.now();
+            streamImg.src = streamUrl + '?t=' + Date.now();
             
             streamImg.onload = () => {
                 document.getElementById('videoContainer').style.display = 'block';
@@ -475,20 +316,10 @@
                 isStreaming = true;
                 processFrame();
                 showStatus('Connected!', 'success');
-                
-                // Reset buttons
-                document.getElementById('connectBtn').disabled = false;
-                document.getElementById('connectBtn').textContent = 'Connect';
-                document.getElementById('hardcodedBtn').disabled = false;
-                document.getElementById('hardcodedBtn').textContent = 'Connect with Hardcoded URL';
             };
             
             streamImg.onerror = () => {
-                showStatus('Failed to load stream', 'error');
-                document.getElementById('connectBtn').disabled = false;
-                document.getElementById('connectBtn').textContent = 'Connect';
-                document.getElementById('hardcodedBtn').disabled = false;
-                document.getElementById('hardcodedBtn').textContent = 'Connect with Hardcoded URL';
+                showStatus('Failed to connect', 'error');
             };
         }
         
@@ -498,13 +329,6 @@
             statusDiv.className = `status ${type}`;
             statusDiv.textContent = message;
         }
-        
-        // Initialize on page load
-        window.onload = function() {
-            console.log('Page loaded');
-            // Pre-fill input
-            document.getElementById('cameraUrl').value = 'http://192.168.31.214';
-        };
     </script>
 </body>
 </html>
