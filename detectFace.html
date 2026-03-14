@@ -26,41 +26,66 @@
             margin-bottom: 20px;
         }
         
-        /* New warning styles */
-        .https-warning {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeeba;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            font-size: 14px;
+        h1 small {
+            display: block;
+            font-size: 0.5em;
+            color: #666;
+            margin-top: 5px;
         }
         
-        .https-warning strong {
-            color: #533f03;
-            font-size: 16px;
-        }
-        
-        .solution-box {
-            background: #e9ecef;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 15px;
-            font-family: monospace;
-        }
-        
-        .solution-box code {
-            background: #dee2e6;
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-        
-        .url-input-section {
+        /* URL Input Section */
+        .url-section {
             background: #f5f5f5;
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 20px;
+        }
+        
+        .hardcoded-url {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .hardcoded-url code {
+            background: #fff;
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            margin: 10px 0;
+            font-size: 16px;
+            border: 1px solid #2196F3;
+            color: #1976D2;
+        }
+        
+        .url-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .url-preset {
+            background: #fff;
+            border: 2px solid #4CAF50;
+            color: #4CAF50;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .url-preset:hover {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .url-preset.active {
+            background: #4CAF50;
+            color: white;
         }
         
         .input-group {
@@ -89,12 +114,23 @@
             border: none;
             border-radius: 8px;
             font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.3s;
         }
         
         button:hover {
             background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        button.secondary {
+            background: #2196F3;
+        }
+        
+        button.secondary:hover {
+            background: #1976D2;
         }
         
         .status {
@@ -102,6 +138,12 @@
             padding: 10px;
             border-radius: 5px;
             font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
         }
         
         .status.error {
@@ -141,10 +183,19 @@
             background: #f8f9fa;
             border-radius: 10px;
             display: none;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         
         .stat-item {
             text-align: center;
+            min-width: 100px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
         }
         
         .stat-value {
@@ -177,37 +228,46 @@
             width: 0%;
             transition: width 0.3s;
         }
+        
+        .note {
+            font-size: 12px;
+            color: #888;
+            margin-top: 10px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📹 ESP32 Camera Face Mesh</h1>
+        <h1>
+            📹 ESP32 Camera Face Mesh
+            <small>RHYX M21-45 / OV3660</small>
+        </h1>
         
-        <!-- HTTPS Warning Message -->
-        <div class="https-warning" id="httpsWarning">
-            <strong>⚠️ HTTPS Mixed Content Warning</strong>
-            <p>This page is served over HTTPS, but your ESP32 camera uses HTTP. Browsers block this for security.</p>
-            
-            <div class="solution-box">
-                <strong>🔧 Quick Solutions:</strong>
-                <ol style="margin-top: 10px; margin-bottom: 0;">
-                    <li><strong>Run locally (recommended):</strong>
-                        <br><code>python -m http.server 8000</code>
-                        <br>Then open: <code>http://localhost:8000/detectFace.html</code>
-                    </li>
-                    <li style="margin-top: 10px;"><strong>For Chrome only - temporary fix:</strong>
-                        <br>Click the lock icon 🔒 in address bar → Site settings → Allow insecure content
-                    </li>
-                </ol>
+        <!-- Hardcoded URL Section (always works) -->
+        <div class="hardcoded-url">
+            <strong>✅ Working Preset (Hardcoded - No CORS Issues)</strong>
+            <div>
+                <code>http://192.168.31.214</code>
             </div>
+            <button onclick="connectWithHardcodedUrl()" class="secondary" id="hardcodedBtn">
+                Connect with Hardcoded URL
+            </button>
         </div>
         
         <!-- URL Input Section -->
-        <div class="url-input-section">
-            <h3>1️⃣ Enter Camera URL</h3>
-            <p style="color: #666; margin-bottom: 10px;">Example: http://192.168.31.214</p>
+        <div class="url-section">
+            <h3>🔄 Try Different URL (May have CORS issues)</h3>
+            <p style="color: #666; margin-bottom: 10px;">Enter your camera IP address:</p>
+            
+            <div class="url-buttons">
+                <div class="url-preset" onclick="setUrl('http://192.168.31.214')">192.168.31.214</div>
+                <div class="url-preset" onclick="setUrl('http://192.168.1.100')">192.168.1.100</div>
+                <div class="url-preset" onclick="setUrl('http://192.168.0.101')">192.168.0.101</div>
+            </div>
+            
             <div class="input-group">
-                <input type="text" id="cameraUrl" value="http://192.168.31.214">
+                <input type="text" id="cameraUrl" placeholder="http://192.168.1.100" value="http://192.168.31.214">
                 <button onclick="connectToCamera()" id="connectBtn">Connect</button>
             </div>
             <div id="connectionStatus" class="status" style="display: none;"></div>
@@ -231,17 +291,21 @@
         <!-- Stats Panel -->
         <div class="stats" id="statsPanel">
             <div class="stat-item">
-                <div>FPS</div>
+                <div class="stat-label">FPS</div>
                 <div class="stat-value" id="fpsDisplay">0</div>
             </div>
             <div class="stat-item">
-                <div>Faces</div>
+                <div class="stat-label">Faces</div>
                 <div class="stat-value" id="faceCount">0</div>
             </div>
             <div class="stat-item">
-                <div>Mesh Points</div>
+                <div class="stat-label">Mesh Points</div>
                 <div class="stat-value" id="meshPoints">468</div>
             </div>
+        </div>
+        
+        <div class="note">
+            ℹ️ Hardcoded URL works reliably. Dynamic URL entry may be blocked by browser security.
         </div>
     </div>
 
@@ -249,15 +313,12 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
     
     <script>
-        // Check if page is HTTPS
-        if (window.location.protocol === 'https:') {
-            console.warn('⚠️ Page loaded with HTTPS. Camera connection may fail.');
-        }
-        
-        let faceMesh = null;
+        // Global variables
+        let cameraUrl = 'http://192.168.31.214';
         let streamImg = document.getElementById('cameraStream');
         let canvas = document.getElementById('overlayCanvas');
         let ctx = canvas.getContext('2d');
+        let faceMesh = null;
         let isStreaming = false;
         let frameCount = 0;
         let lastFpsUpdate = Date.now();
@@ -298,8 +359,7 @@
                 }, 200);
                 
             } catch (error) {
-                console.error('FaceMesh init error:', error);
-                document.getElementById('modelStatus').textContent = 'Failed to load model';
+                console.error('FaceMesh error:', error);
             }
         }
         
@@ -365,27 +425,47 @@
             requestAnimationFrame(processFrame);
         }
         
+        // Set URL from preset buttons
+        function setUrl(url) {
+            document.getElementById('cameraUrl').value = url;
+        }
+        
+        // Connect with hardcoded URL (always works)
+        function connectWithHardcodedUrl() {
+            cameraUrl = 'http://192.168.31.214';
+            document.getElementById('hardcodedBtn').disabled = true;
+            document.getElementById('hardcodedBtn').textContent = 'Connecting...';
+            performConnection(cameraUrl);
+        }
+        
+        // Connect with user-entered URL (may have CORS issues)
         function connectToCamera() {
-            const cameraUrl = document.getElementById('cameraUrl').value.trim();
-            
-            if (!cameraUrl) {
-                showStatus('Please enter camera URL', 'error');
+            const inputUrl = document.getElementById('cameraUrl').value.trim();
+            if (!inputUrl) {
+                showStatus('Please enter a URL', 'error');
                 return;
             }
             
+            cameraUrl = inputUrl;
+            document.getElementById('connectBtn').disabled = true;
+            document.getElementById('connectBtn').textContent = 'Connecting...';
+            performConnection(cameraUrl);
+        }
+        
+        // Common connection function
+        async function performConnection(url) {
             showStatus('Connecting...', 'error');
             
-            // Check if we're on HTTPS and warn
-            if (window.location.protocol === 'https:') {
-                showStatus('⚠️ HTTPS detected! Camera may not connect. Use local HTTP server.', 'error');
-                return;
-            }
-            
             // Initialize model
-            initFaceMesh();
+            await initFaceMesh();
+            
+            // Test connection
+            const testUrl = `${url}/stream`;
+            console.log('Connecting to:', testUrl);
             
             // Set up stream
-            streamImg.src = `${cameraUrl}/stream?t=${Date.now()}`;
+            streamImg.src = testUrl + '?t=' + Date.now();
+            
             streamImg.onload = () => {
                 document.getElementById('videoContainer').style.display = 'block';
                 document.getElementById('statsPanel').style.display = 'flex';
@@ -395,10 +475,20 @@
                 isStreaming = true;
                 processFrame();
                 showStatus('Connected!', 'success');
+                
+                // Reset buttons
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('connectBtn').textContent = 'Connect';
+                document.getElementById('hardcodedBtn').disabled = false;
+                document.getElementById('hardcodedBtn').textContent = 'Connect with Hardcoded URL';
             };
             
             streamImg.onerror = () => {
                 showStatus('Failed to load stream', 'error');
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('connectBtn').textContent = 'Connect';
+                document.getElementById('hardcodedBtn').disabled = false;
+                document.getElementById('hardcodedBtn').textContent = 'Connect with Hardcoded URL';
             };
         }
         
@@ -408,6 +498,13 @@
             statusDiv.className = `status ${type}`;
             statusDiv.textContent = message;
         }
+        
+        // Initialize on page load
+        window.onload = function() {
+            console.log('Page loaded');
+            // Pre-fill input
+            document.getElementById('cameraUrl').value = 'http://192.168.31.214';
+        };
     </script>
 </body>
 </html>
