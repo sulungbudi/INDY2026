@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webcam Filter 3x3 - EDGE DETECTION JELAS (tanpa auto-levels)</title>
+    <title>Webcam Filter 3x3 - EDGE DETECTION JELAS</title>
     <style>
         * {
             box-sizing: border-box;
@@ -253,13 +253,13 @@
     <div class="control-row">
         <div class="slider-container">
             <span>✨ Kontras:</span>
-            <input type="range" id="contrastSlider" min="0.5" max="5" step="0.1" value="2.5">
+            <input type="range" id="contrastSlider" min="1" max="5" step="0.1" value="2.5">
             <span id="contrastValue">2.5x</span>
         </div>
         <div class="slider-container">
             <span>💡 Brightness:</span>
-            <input type="range" id="brightnessSlider" min="-50" max="50" step="1" value="10">
-            <span id="brightnessValue">10</span>
+            <input type="range" id="brightnessSlider" min="0" max="100" step="1" value="30">
+            <span id="brightnessValue">30</span>
         </div>
         <div class="slider-container">
             <span>⚡ Invert:</span>
@@ -268,7 +268,7 @@
     </div>
     
     <div class="footer">
-        ✦ edge detection (Laplacian) ✦ tanpa auto-levels ✦ kontras dan brightness bisa diatur
+        ✦ edge detection (Laplacian) ✦ kontras ditingkatkan agar edge terlihat jelas
     </div>
 </div>
 
@@ -337,7 +337,7 @@
         return kernel.map(v => v / sumAbs);
     }
     
-    // === KONVOLUSI TANPA AUTO-LEVELS ===
+    // === KONVOLUSI DENGAN KONTRAKSI ===
     function convolve(data, width, height, kernel, contrast, brightness, invert) {
         const output = new Uint8ClampedArray(data.length);
         const normK = normalizeKernel(kernel);
@@ -348,7 +348,11 @@
             return new ImageData(output, width, height);
         }
         
-        // Langsung konvolusi dan aplikasikan contrast/brightness
+        // Cari nilai min dan max untuk auto-levels
+        let min = 255, max = 0;
+        const tempResults = [];
+        
+        // Loop pertama: hitung hasil konvolusi tanpa clamping dulu
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const centerIdx = (y * width + x) * 4;
@@ -357,7 +361,6 @@
                 
                 for (let ky = -1; ky <= 1; ky++) {
                     for (let kx = -1; kx <= 1; kx++) {
-                        // Mirror padding
                         let nx = x + kx;
                         let ny = y + ky;
                         
@@ -373,6 +376,36 @@
                         g += data[neighborIdx + 1] * weight;
                         b += data[neighborIdx + 2] * weight;
                     }
+                }
+                
+                // Simpan hasil sementara
+                tempResults[centerIdx] = r;
+                tempResults[centerIdx + 1] = g;
+                tempResults[centerIdx + 2] = b;
+                
+                // Update min dan max
+                min = Math.min(min, r, g, b);
+                max = Math.max(max, r, g, b);
+            }
+        }
+        
+        // Rentang nilai
+        const range = max - min;
+        
+        // Loop kedua: aplikasikan contrast, brightness, dan clamping
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const centerIdx = (y * width + x) * 4;
+                
+                let r = tempResults[centerIdx];
+                let g = tempResults[centerIdx + 1];
+                let b = tempResults[centerIdx + 2];
+                
+                // Auto-levels: regangkan ke 0-255
+                if (range > 1) {
+                    r = ((r - min) / range) * 255;
+                    g = ((g - min) / range) * 255;
+                    b = ((b - min) / range) * 255;
                 }
                 
                 // Aplikasikan contrast dan brightness
@@ -417,7 +450,7 @@
         const brightness = parseFloat(brightnessSlider.value);
         const invert = invertCheckbox.checked;
         
-        // Konvolusi tanpa auto-levels
+        // Konvolusi dengan peningkatan kontras
         const filteredData = convolve(
             imageData.data, 
             canvas.width, 
