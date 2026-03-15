@@ -3,33 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webcam Filter 3x3 - LANCAR</title>
+    <title>Webcam Filter 3x3 - PASTI JALAN</title>
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
-            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         }
         body {
-            background: #0a0a14;
+            background: #0c0c1c;
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 16px;
         }
-        .container {
+        .main-wrapper {
             max-width: 1200px;
             width: 100%;
-            background: #161625;
-            border-radius: 2rem;
+            background: #1a1a2e;
+            border-radius: 2.5rem;
             padding: 2rem;
-            box-shadow: 0 30px 50px rgba(0,0,0,0.7);
-            border: 1px solid #3d3d66;
+            box-shadow: 0 25px 45px -10px black;
+            border: 1px solid #4c4c82;
         }
         
-        /* DUA KOLOM BESAR */
-        .video-row {
+        .display-row {
             display: flex;
             flex-wrap: wrap;
             gap: 2rem;
@@ -37,66 +36,48 @@
             margin-bottom: 2rem;
         }
         
-        .video-card {
+        .display-card {
             flex: 1 1 400px;
             min-width: 320px;
-            background: #1a1a2e;
-            border-radius: 1.8rem;
+            background: #21213b;
+            border-radius: 2rem;
             padding: 1.5rem;
-            border: 1px solid #54548a;
-            box-shadow: 0 15px 30px -10px black;
+            border: 1px solid #6a6aad;
+            box-shadow: 0 15px 25px -8px black;
         }
         
-        .video-header {
+        .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1rem;
-            color: #d0d0ff;
+            background: #2a2a4a;
+            padding: 0.7rem 1.5rem;
+            border-radius: 3rem;
+            color: #e4e4ff;
             font-weight: 600;
-            background: #22223b;
-            padding: 0.6rem 1.2rem;
-            border-radius: 3rem;
-            border: 1px solid #6a6aa8;
-        }
-        
-        .video-header span:first-child {
-            font-size: 1.1rem;
-            letter-spacing: 0.5px;
-        }
-        
-        .video-header span:last-child {
-            background: #2f2f55;
-            padding: 0.3rem 1rem;
-            border-radius: 3rem;
-            font-size: 0.8rem;
-            color: #c4c4ff;
+            border: 1px solid #8888cf;
         }
         
         video, canvas {
             width: 100%;
             aspect-ratio: 4/3;
             border-radius: 1.5rem;
-            background: #0b0b18;
-            border: 3px solid #5a5a99;
+            background: #111122;
+            border: 3px solid #6767b0;
             display: block;
-            box-shadow: 0 10px 20px black;
         }
         
         video {
-            transform: scaleX(-1); /* mirror */
+            transform: scaleX(-1); /* biar seperti bercermin */
         }
         
-        canvas {
-            transform: scaleX(-1); /* mirror biar konsisten */
-        }
-        
-        /* KERNEL MINI */
-        .kernel-section {
-            background: #1f1f36;
-            border-radius: 5rem;
+        /* kernel area kecil */
+        .kernel-dock {
+            background: #23233f;
+            border-radius: 4rem;
             padding: 1.2rem 2rem;
-            border: 1px solid #6d6daa;
+            border: 1px solid #7a7ac2;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
@@ -104,257 +85,235 @@
             gap: 2rem;
         }
         
-        .kernel-label {
+        .kernel-tag {
             display: flex;
             align-items: center;
             gap: 1rem;
-            background: #2b2b4a;
-            padding: 0.5rem 1.5rem;
+            background: #30305a;
+            padding: 0.6rem 1.8rem;
             border-radius: 3rem;
-            border: 1px solid #8a8ac7;
+            border: 1px solid #9c9ce6;
         }
         
-        .kernel-label span {
-            color: #ececff;
+        .kernel-tag span {
+            color: #f0f0ff;
             font-weight: 600;
             font-size: 1rem;
         }
         
-        #resetEdgeBtn {
-            background: #41416e;
+        #resetBtn {
+            background: #44447a;
             border: none;
             color: white;
             font-weight: 600;
-            padding: 0.6rem 1.4rem;
+            padding: 0.6rem 1.5rem;
             border-radius: 3rem;
             font-size: 0.8rem;
             cursor: pointer;
-            border: 1px solid #a6a6f0;
-            box-shadow: 0 4px 0 #23233a;
-            transition: 0.08s;
+            border: 1px solid #b6b6ff;
+            box-shadow: 0 4px 0 #23233f;
+            transition: 0.05s;
         }
         
-        #resetEdgeBtn:active {
+        #resetBtn:active {
             transform: translateY(4px);
-            box-shadow: 0 1px 0 #23233a;
+            box-shadow: 0 1px 0 #23233f;
         }
         
-        /* 3x3 grid kecil */
-        .kernel-grid {
+        .matrix-3x3 {
             display: flex;
-            gap: 0.4rem;
-            background: #151527;
-            padding: 0.8rem 1.5rem;
-            border-radius: 4rem;
-            border: 1px solid #6f6fb0;
+            gap: 8px;
+            background: #181830;
+            padding: 0.8rem 1.8rem;
+            border-radius: 3rem;
+            border: 1px solid #8181cc;
         }
         
-        .kernel-col {
+        .matrix-col {
             display: flex;
             flex-direction: column;
-            gap: 0.4rem;
+            gap: 8px;
         }
         
-        .kernel-col input {
-            width: 55px;
-            height: 50px;
+        .matrix-col input {
+            width: 58px;
+            height: 52px;
             text-align: center;
             font-size: 1.2rem;
             font-weight: 700;
-            background: #0d0d1f;
-            border: 2px solid #5b5b9a;
-            color: #ffffff;
+            background: #0b0b1e;
+            border: 2px solid #6060aa;
+            color: white;
             border-radius: 12px;
-            padding: 0;
-            box-shadow: inset 0 2px 5px black;
+            box-shadow: inset 0 2px 6px black;
         }
         
-        .kernel-col input:focus {
+        .matrix-col input:focus {
             outline: none;
-            border-color: #b3aaff;
-            background: #1d1d3b;
+            border-color: #b4b4ff;
+            background: #1c1c3a;
         }
         
-        .info-text {
-            color: #a8a8e6;
+        .hint {
+            color: #b0b0ee;
             font-size: 0.85rem;
-            background: #262642;
+            background: #2d2d55;
             padding: 0.4rem 1.2rem;
             border-radius: 3rem;
-            white-space: nowrap;
         }
         
-        .footer {
+        .credit {
             text-align: center;
-            color: #6f6faa;
-            margin-top: 1.5rem;
+            color: #7a7abd;
+            margin-top: 1.8rem;
             font-size: 0.75rem;
-            border-top: 1px dashed #4a4a7a;
+            border-top: 1px dashed #4f4f89;
             padding-top: 1rem;
         }
         
-        @media (max-width: 700px) {
-            .kernel-section { flex-direction: column; gap: 1rem; }
-            .container { padding: 1rem; }
+        @media (max-width: 750px) {
+            .kernel-dock { flex-direction: column; }
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <!-- WEBCAM (KIRI) DAN FILTER (KANAN) BESAR -->
-    <div class="video-row">
-        <!-- KIRI: WEBCAM -->
-        <div class="video-card">
-            <div class="video-header">
-                <span>📹 WEBCAM</span>
-                <span>LIVE</span>
+<div class="main-wrapper">
+    <!-- 2 KOLOM UTAMA: WEBCAM (KIRI) DAN FILTER (KANAN) -->
+    <div class="display-row">
+        <!-- KIRI -->
+        <div class="display-card">
+            <div class="card-header">
+                <span>📷 WEBCAM LIVE</span>
+                <span>INPUT</span>
             </div>
             <video id="webcam" autoplay playsinline muted></video>
-            <div style="margin-top: 10px; color: #a6a6dd; font-size: 0.9rem; padding-left: 10px;">
-                ⬅️ mirror
-            </div>
+            <div style="margin-top: 12px; color: #b4b4f0; padding-left: 12px;">400x300 (mirror)</div>
         </div>
         
-        <!-- KANAN: HASIL FILTER -->
-        <div class="video-card">
-            <div class="video-header">
-                <span>🎛️ HASIL FILTER 3x3</span>
-                <span>REALTIME</span>
+        <!-- KANAN -->
+        <div class="display-card">
+            <div class="card-header">
+                <span>🎨 FILTER 3x3</span>
+                <span>OUTPUT</span>
             </div>
             <canvas id="filterCanvas" width="400" height="300"></canvas>
-            <div style="margin-top: 10px; color: #a6a6dd; font-size: 0.9rem; padding-left: 10px;">
-                ⬅️ kernel di bawah bisa diubah
-            </div>
+            <div style="margin-top: 12px; color: #b4b4f0; padding-left: 12px;">kernel bisa diubah di bawah</div>
         </div>
     </div>
     
-    <!-- KONTROL KERNEL MINI (TIDAK BESAR) -->
-    <div class="kernel-section">
-        <div class="kernel-label">
-            <span>⚡ 3x3 KERNEL</span>
-            <button id="resetEdgeBtn">↺ reset edge</button>
+    <!-- KONTROL KERNEL (MINI) -->
+    <div class="kernel-dock">
+        <div class="kernel-tag">
+            <span>⚡ KERNEL 3x3</span>
+            <button id="resetBtn">↺ reset edge</button>
         </div>
         
-        <!-- 9 input dengan susunan baris-major (kiri ke kanan, atas ke bawah) -->
-        <div class="kernel-grid">
+        <!-- Matriks 3 baris, tampilan grid kecil -->
+        <div class="matrix-3x3">
             <!-- Baris 0 -->
-            <div class="kernel-col">
+            <div class="matrix-col">
                 <input id="k00" type="number" value="0" step="any">
                 <input id="k10" type="number" value="-1" step="any">
                 <input id="k20" type="number" value="0" step="any">
             </div>
-            <div class="kernel-col">
+            <!-- Baris 1 -->
+            <div class="matrix-col">
                 <input id="k01" type="number" value="-1" step="any">
                 <input id="k11" type="number" value="4" step="any">
                 <input id="k21" type="number" value="-1" step="any">
             </div>
-            <div class="kernel-col">
+            <!-- Baris 2 -->
+            <div class="matrix-col">
                 <input id="k02" type="number" value="0" step="any">
                 <input id="k12" type="number" value="-1" step="any">
                 <input id="k22" type="number" value="0" step="any">
             </div>
         </div>
         
-        <div class="info-text">
-            ⚡ normalisasi otomatis (dibagi total |bobot|)
+        <div class="hint">
+            ⚡ otomatis normalisasi (dibagi total |nilai|)
         </div>
     </div>
     
-    <div class="footer">
-        ✦ filter 3x3 konvolusi ✦ default: edge detection ✦ webcam diperlukan
+    <div class="credit">
+        ✦ filter konvolusi 3x3 ✦ edge detection (Laplacian) ✦ ubah angka untuk efek berbeda
     </div>
 </div>
 
 <script>
 (function() {
-    // ==================== ELEMEN ====================
+    // ========== AMBIL ELEMEN ==========
     const video = document.getElementById('webcam');
     const canvas = document.getElementById('filterCanvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const ctx = canvas.getContext('2d');
     
-    // Input kernel: urut baris-major (baris 0, baris 1, baris 2)
-    // id sesuai posisi: baris dulu, baru kolom
-    const kernelIds = [
-        'k00', 'k01', 'k02',
-        'k10', 'k11', 'k12',
-        'k20', 'k21', 'k22'
-    ];
+    // Semua input kernel dalam urutan baris-major (baris0, baris1, baris2)
+    const inputIds = ['k00','k01','k02','k10','k11','k12','k20','k21','k22'];
+    const inputs = inputIds.map(id => document.getElementById(id));
     
-    const inputs = kernelIds.map(id => document.getElementById(id));
+    // Kernel default: edge detection Laplacian
+    const EDGE_KERNEL = [0, -1, 0, -1, 4, -1, 0, -1, 0];
     
-    // Kernel default edge detection
-    const DEFAULT_KERNEL = [0, -1, 0, -1, 4, -1, 0, -1, 0];
-    
-    // Set nilai awal
-    inputs.forEach((input, index) => {
-        input.value = DEFAULT_KERNEL[index];
+    // Set nilai awal ke semua input
+    inputs.forEach((inp, idx) => {
+        inp.value = EDGE_KERNEL[idx];
     });
     
     // Tombol reset
-    document.getElementById('resetEdgeBtn').addEventListener('click', () => {
-        inputs.forEach((input, index) => {
-            input.value = DEFAULT_KERNEL[index];
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        inputs.forEach((inp, idx) => {
+            inp.value = EDGE_KERNEL[idx];
         });
     });
     
-    // ==================== WEBCAM ====================
-    async function initWebcam() {
+    // ========== AKSES WEBCAM ==========
+    async function startCamera() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    width: { ideal: 400 },
-                    height: { ideal: 300 },
-                    facingMode: 'user'
-                }
+                video: { width: 400, height: 300, facingMode: 'user' }
             });
             video.srcObject = stream;
         } catch (err) {
-            alert('Tidak bisa mengakses webcam: ' + err.message);
+            alert('Gagal akses webcam: ' + err.message);
         }
     }
-    initWebcam();
+    startCamera();
     
-    // ==================== KERNEL & NORMALISASI ====================
-    function getCurrentKernel() {
+    // ========== FUNGSI KERNEL ==========
+    function getKernelValues() {
         return inputs.map(inp => {
             const val = parseFloat(inp.value);
             return isNaN(val) ? 0 : val;
         });
     }
     
-    // Normalisasi dengan jumlah absolut
+    // Normalisasi dengan jumlah absolut (biar hasilnya tidak overexposed)
     function normalizeKernel(kernel) {
         let sumAbs = 0;
-        for (let i = 0; i < 9; i++) {
-            sumAbs += Math.abs(kernel[i]);
-        }
-        if (sumAbs < 1e-6) return null; // hindari pembagian 0
+        for (let i = 0; i < 9; i++) sumAbs += Math.abs(kernel[i]);
+        if (sumAbs < 0.000001) return null; // hindari bagi nol
         return kernel.map(v => v / sumAbs);
     }
     
-    // ==================== KONVOLUSI ====================
-    function applyConvolution(imageData, width, height, kernel) {
-        const data = imageData.data;
+    // ========== KONVOLUSI MANUAL ==========
+    function convolve(data, width, height, kernel) {
         const output = new Uint8ClampedArray(data.length);
+        const normK = normalizeKernel(kernel);
         
-        // Normalisasi kernel
-        const normKernel = normalizeKernel(kernel);
-        if (!normKernel) {
-            // Jika kernel nol semua, salin gambar asli (identitas)
-            for (let i = 0; i < data.length; i++) {
-                output[i] = data[i];
-            }
+        // Jika kernel semua nol, salin data asli (biar tidak hitam)
+        if (!normK) {
+            for (let i = 0; i < data.length; i++) output[i] = data[i];
             return new ImageData(output, width, height);
         }
         
-        // Konvolusi dengan mirror padding
+        // Loop setiap piksel
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const centerIdx = (y * width + x) * 4;
                 
                 let r = 0, g = 0, b = 0;
                 
-                // Loop kernel 3x3
+                // Terapkan kernel 3x3
                 for (let ky = -1; ky <= 1; ky++) {
                     for (let kx = -1; kx <= 1; kx++) {
                         // Koordinat tetangga dengan mirror padding
@@ -368,7 +327,7 @@
                         if (ny >= height) ny = 2 * height - ny - 1;
                         
                         const neighborIdx = (ny * width + nx) * 4;
-                        const weight = normKernel[(ky + 1) * 3 + (kx + 1)];
+                        const weight = normK[(ky + 1) * 3 + (kx + 1)];
                         
                         r += data[neighborIdx] * weight;
                         g += data[neighborIdx + 1] * weight;
@@ -376,77 +335,52 @@
                     }
                 }
                 
-                // Clamping
+                // Clamp ke 0-255
                 output[centerIdx] = Math.min(255, Math.max(0, Math.round(r)));
                 output[centerIdx + 1] = Math.min(255, Math.max(0, Math.round(g)));
                 output[centerIdx + 2] = Math.min(255, Math.max(0, Math.round(b)));
-                output[centerIdx + 3] = data[centerIdx + 3]; // salin alpha
+                output[centerIdx + 3] = data[centerIdx + 3]; // alpha
             }
         }
         
         return new ImageData(output, width, height);
     }
     
-    // ==================== MIRROR DATA (untuk konsistensi) ====================
-    function mirrorImageData(imageData, width, height) {
-        const data = imageData.data;
-        const mirrored = new Uint8ClampedArray(data.length);
-        
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const srcIdx = (y * width + x) * 4;
-                const dstIdx = (y * width + (width - 1 - x)) * 4;
-                
-                mirrored[dstIdx] = data[srcIdx];
-                mirrored[dstIdx + 1] = data[srcIdx + 1];
-                mirrored[dstIdx + 2] = data[srcIdx + 2];
-                mirrored[dstIdx + 3] = data[srcIdx + 3];
-            }
-        }
-        
-        return new ImageData(mirrored, width, height);
-    }
-    
-    // ==================== LOOP UTAMA (PASTI JALAN) ====================
-    function processFrame() {
+    // ========== LOOP UTAMA - PALING SIMPEL ==========
+    function filterFrame() {
         if (video.readyState < 2) {
-            requestAnimationFrame(processFrame);
+            requestAnimationFrame(filterFrame);
             return;
         }
         
-        // Gambar video ke canvas ukuran tetap 400x300
+        // Gambar video ke canvas (ukuran pas 400x300)
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // Ambil data pixel
-        let sourceData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        
-        // Mirror data agar sesuai dengan tampilan video (yang di-mirror CSS)
-        let mirroredSource = mirrorImageData(sourceData, canvas.width, canvas.height);
+        // Ambil data piksel dari canvas
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         
         // Ambil kernel dari input
-        const kernel = getCurrentKernel();
+        const kernel = getKernelValues();
         
-        // Terapkan konvolusi
-        let filteredData = applyConvolution(mirroredSource, canvas.width, canvas.height, kernel);
+        // Konvolusi!
+        const filtered = convolve(imageData.data, canvas.width, canvas.height, kernel);
         
-        // Mirror kembali hasilnya agar tampilan canvas (juga di-mirror CSS) menjadi benar
-        let finalData = mirrorImageData(filteredData, canvas.width, canvas.height);
+        // Tampilkan hasil filter ke canvas yang SAMA
+        // TAPI kita ingin canvas menampilkan hasil filter, bukan video asli
+        ctx.putImageData(filtered, 0, 0);
         
-        // Tampilkan hasil
-        ctx.putImageData(finalData, 0, 0);
-        
-        // Loop terus menerus
-        requestAnimationFrame(processFrame);
+        // Loop terus
+        requestAnimationFrame(filterFrame);
     }
     
-    // Tunggu video siap lalu mulai loop
+    // Mulai loop setelah video siap
     video.addEventListener('loadeddata', () => {
-        processFrame();
+        filterFrame();
     });
     
-    // Jika video sudah siap sebelum event
+    // Jaga-jaga kalau video sudah siap
     if (video.readyState >= 2) {
-        processFrame();
+        filterFrame();
     }
 })();
 </script>
