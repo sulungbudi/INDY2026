@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webcam Filter 3x3 - WORKING</title>
+    <title>Webcam Filter 3x3 - EDGE DETECTION JELAS</title>
     <style>
         * {
             box-sizing: border-box;
@@ -163,6 +163,36 @@
             border-top: 1px dashed #56569a;
             padding-top: 1rem;
         }
+
+        .control-row {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .slider-container {
+            background: #2d2d55;
+            padding: 0.5rem 1.5rem;
+            border-radius: 3rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .slider-container input {
+            width: 150px;
+            cursor: pointer;
+        }
+
+        .slider-container span {
+            min-width: 45px;
+            text-align: center;
+            color: #ffd966;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -184,11 +214,11 @@
                 <span>OUTPUT</span>
             </div>
             <canvas id="filterCanvas" width="400" height="300"></canvas>
-            <div style="color:#b4b4f0; margin-top:10px;">hasil konvolusi</div>
+            <div style="color:#b4b4f0; margin-top:10px;">hasil edge detection + kontras</div>
         </div>
     </div>
     
-    <!-- KERNEL MINI (tidak besar) -->
+    <!-- KERNEL MINI -->
     <div class="kernel-bar">
         <div class="kernel-title">
             <span>🎯 KERNEL 3x3</span>
@@ -218,22 +248,38 @@
             ⚡ dinormalisasi otomatis
         </div>
     </div>
+
+    <!-- Kontrol Kontras dan Brightness -->
+    <div class="control-row">
+        <div class="slider-container">
+            <span>✨ Kontras:</span>
+            <input type="range" id="contrastSlider" min="1" max="5" step="0.1" value="2.5">
+            <span id="contrastValue">2.5x</span>
+        </div>
+        <div class="slider-container">
+            <span>💡 Brightness:</span>
+            <input type="range" id="brightnessSlider" min="0" max="100" step="1" value="30">
+            <span id="brightnessValue">30</span>
+        </div>
+        <div class="slider-container">
+            <span>⚡ Invert:</span>
+            <input type="checkbox" id="invertCheckbox" style="width: 20px; height: 20px; accent-color: #6a6ab3;">
+        </div>
+    </div>
     
     <div class="footer">
-        ✦ edge detection (Laplacian) ✦ ubah angka untuk efek lain
+        ✦ edge detection (Laplacian) ✦ kontras ditingkatkan agar edge terlihat jelas
     </div>
 </div>
 
 <script>
 (function() {
-    // === SETUP CANVAS DENGAN willReadFrequently ===
+    // === SETUP CANVAS ===
     const video = document.getElementById('webcam');
     const canvas = document.getElementById('filterCanvas');
-    
-    // PENTING: set willReadFrequently ke true untuk hindari warning
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     
-    // === INPUT KERNEL (urutan baris-major) ===
+    // === INPUT KERNEL ===
     const kernelIds = ['k00','k01','k02','k10','k11','k12','k20','k21','k22'];
     const inputs = kernelIds.map(id => document.getElementById(id));
     
@@ -245,6 +291,21 @@
     // Tombol reset
     document.getElementById('resetKernel').addEventListener('click', () => {
         inputs.forEach((inp, i) => inp.value = EDGE_KERNEL[i]);
+    });
+    
+    // === KONTROL SLIDER ===
+    const contrastSlider = document.getElementById('contrastSlider');
+    const contrastValue = document.getElementById('contrastValue');
+    const brightnessSlider = document.getElementById('brightnessSlider');
+    const brightnessValue = document.getElementById('brightnessValue');
+    const invertCheckbox = document.getElementById('invertCheckbox');
+    
+    contrastSlider.addEventListener('input', () => {
+        contrastValue.textContent = contrastSlider.value + 'x';
+    });
+    
+    brightnessSlider.addEventListener('input', () => {
+        brightnessValue.textContent = brightnessSlider.value;
     });
     
     // === WEBCAM ===
@@ -260,7 +321,7 @@
     }
     startWebcam();
     
-    // === BACA KERNEL DARI INPUT ===
+    // === BACA KERNEL ===
     function getKernel() {
         return inputs.map(inp => {
             const val = parseFloat(inp.value);
@@ -268,7 +329,7 @@
         });
     }
     
-    // === NORMALISASI (jumlah absolut) ===
+    // === NORMALISASI ===
     function normalizeKernel(kernel) {
         let sumAbs = 0;
         for (let i = 0; i < 9; i++) sumAbs += Math.abs(kernel[i]);
@@ -276,17 +337,22 @@
         return kernel.map(v => v / sumAbs);
     }
     
-    // === KONVOLUSI 3x3 DENGAN MIRROR PADDING ===
-    function convolve(data, width, height, kernel) {
+    // === KONVOLUSI DENGAN KONTRAKSI ===
+    function convolve(data, width, height, kernel, contrast, brightness, invert) {
         const output = new Uint8ClampedArray(data.length);
         const normK = normalizeKernel(kernel);
         
-        // Fallback: jika kernel nol semua, salin data asli
+        // Fallback jika kernel nol
         if (!normK) {
             for (let i = 0; i < data.length; i++) output[i] = data[i];
             return new ImageData(output, width, height);
         }
         
+        // Cari nilai min dan max untuk auto-levels
+        let min = 255, max = 0;
+        const tempResults = [];
+        
+        // Loop pertama: hitung hasil konvolusi tanpa clamping dulu
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const centerIdx = (y * width + x) * 4;
@@ -295,7 +361,6 @@
                 
                 for (let ky = -1; ky <= 1; ky++) {
                     for (let kx = -1; kx <= 1; kx++) {
-                        // Mirror padding
                         let nx = x + kx;
                         let ny = y + ky;
                         
@@ -313,17 +378,60 @@
                     }
                 }
                 
+                // Simpan hasil sementara
+                tempResults[centerIdx] = r;
+                tempResults[centerIdx + 1] = g;
+                tempResults[centerIdx + 2] = b;
+                
+                // Update min dan max
+                min = Math.min(min, r, g, b);
+                max = Math.max(max, r, g, b);
+            }
+        }
+        
+        // Rentang nilai
+        const range = max - min;
+        
+        // Loop kedua: aplikasikan contrast, brightness, dan clamping
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const centerIdx = (y * width + x) * 4;
+                
+                let r = tempResults[centerIdx];
+                let g = tempResults[centerIdx + 1];
+                let b = tempResults[centerIdx + 2];
+                
+                // Auto-levels: regangkan ke 0-255
+                if (range > 1) {
+                    r = ((r - min) / range) * 255;
+                    g = ((g - min) / range) * 255;
+                    b = ((b - min) / range) * 255;
+                }
+                
+                // Aplikasikan contrast dan brightness
+                r = (r - 128) * contrast + 128 + brightness;
+                g = (g - 128) * contrast + 128 + brightness;
+                b = (b - 128) * contrast + 128 + brightness;
+                
+                // Invert jika diperlukan
+                if (invert) {
+                    r = 255 - r;
+                    g = 255 - g;
+                    b = 255 - b;
+                }
+                
+                // Clamping
                 output[centerIdx] = Math.min(255, Math.max(0, Math.round(r)));
                 output[centerIdx + 1] = Math.min(255, Math.max(0, Math.round(g)));
                 output[centerIdx + 2] = Math.min(255, Math.max(0, Math.round(b)));
-                output[centerIdx + 3] = data[centerIdx + 3]; // alpha
+                output[centerIdx + 3] = data[centerIdx + 3];
             }
         }
         
         return new ImageData(output, width, height);
     }
     
-    // === LOOP FILTER - VERSI SEDERHANA ===
+    // === LOOP FILTER ===
     function processFrame() {
         if (video.readyState < 2) {
             requestAnimationFrame(processFrame);
@@ -336,19 +444,30 @@
         // Ambil data piksel
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         
-        // Ambil kernel dari input
+        // Ambil kernel dan nilai slider
         const kernel = getKernel();
+        const contrast = parseFloat(contrastSlider.value);
+        const brightness = parseFloat(brightnessSlider.value);
+        const invert = invertCheckbox.checked;
         
-        // Konvolusi
-        const filteredData = convolve(imageData.data, canvas.width, canvas.height, kernel);
+        // Konvolusi dengan peningkatan kontras
+        const filteredData = convolve(
+            imageData.data, 
+            canvas.width, 
+            canvas.height, 
+            kernel,
+            contrast,
+            brightness,
+            invert
+        );
         
-        // Tampilkan hasil filter ke canvas
+        // Tampilkan hasil
         ctx.putImageData(filteredData, 0, 0);
         
         requestAnimationFrame(processFrame);
     }
     
-    // Mulai loop setelah video siap
+    // Mulai loop
     video.addEventListener('loadeddata', () => {
         processFrame();
     });
