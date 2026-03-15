@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam + 3x3 Filter Interaktif (Edge Detection Awal)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: #1e1e2f;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 16px;
+        }
+        .card {
+            background: #2d2d3a;
+            border-radius: 28px;
+            padding: 28px 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            border: 1px solid #4a4a5e;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 28px;
+            align-items: flex-start;
+        }
+        .video-panel, .filter-panel {
+            background: #222230;
+            border-radius: 24px;
+            padding: 22px 20px 20px 20px;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.6), 0 10px 20px rgba(0,0,0,0.5);
+            border: 1px solid #565673;
+        }
+        .panel-title {
+            color: #cfcfff;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 14px;
+            margin-left: 4px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .panel-title span {
+            background: #3e3e5a;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            color: #b3b3ff;
+        }
+        canvas, video {
+            display: block;
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            border-radius: 20px;
+            background: #0c0c15;
+            box-shadow: 0 6px 12px black;
+            border: 2px solid #6a6a8b;
+        }
+        video {
+            transform: scaleX(-1); /* mirror biar lebih natural */
+        }
+        canvas.filter-canvas {
+            transform: scaleX(-1); /* mirror juga agar sesuai dengan video */
+        }
+        .kernel-grid {
+            margin-top: 20px;
+            background: #2b2b3c;
+            border-radius: 24px;
+            padding: 22px 18px 18px 18px;
+            border: 1px solid #5d5d7a;
+        }
+        .grid-title {
+            color: #bdbdff;
+            font-weight: 500;
+            font-size: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .grid-title button {
+            background: #4c4c70;
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-shadow: 0 4px 0 #29293d;
+            border: 1px solid #8a8ab0;
+        }
+        .grid-title button:hover {
+            background: #5f5f8a;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 0 #29293d;
+        }
+        .grid-title button:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #29293d;
+        }
+        .matrix {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            justify-items: center;
+            margin-bottom: 20px;
+        }
+        .matrix input {
+            width: 70px;
+            height: 56px;
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: 600;
+            background: #1b1b2a;
+            border: 2px solid #6f6f97;
+            color: #f0e6ff;
+            border-radius: 16px;
+            padding: 0 4px;
+            box-shadow: inset 0 2px 5px #0a0a12;
+            transition: 0.1s;
+        }
+        .matrix input:focus {
+            outline: none;
+            border-color: #b3aaff;
+            background: #26263b;
+        }
+        .info-note {
+            color: #a0a0cc;
+            font-size: 0.8rem;
+            background: #1e1e2e;
+            padding: 8px 16px;
+            border-radius: 50px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+        .divider {
+            color: #4e4e72;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin: 14px 0 6px 0;
+        }
+        .footer-note {
+            color: #7a7ab3;
+            text-align: center;
+            margin-top: 18px;
+            font-size: 0.8rem;
+            border-top: 1px dashed #4a4a6a;
+            padding-top: 14px;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="container">
+        <!-- KIRI: WEBCAM -->
+        <div class="video-panel">
+            <div class="panel-title">
+                📹 WEBCAM <span>masukan</span>
+            </div>
+            <video id="webcam" autoplay playsinline muted></video>
+            <div style="margin-top: 12px; color:#afafdd; font-size:0.9rem; display:flex; gap:10px;">
+                <span>🔵 live mirror</span>
+                <span>•</span>
+                <span>⬅️ 400x300 (resize otomatis)</span>
+            </div>
+        </div>
+
+        <!-- KANAN: HASIL FILTER + KONTROL KERNEL -->
+        <div class="filter-panel">
+            <div class="panel-title">
+                🎛️ HASIL FILTER 3x3 <span>konvolusi</span>
+            </div>
+            <canvas id="filterCanvas" class="filter-canvas" width="400" height="300"></canvas>
+
+            <!-- KERNEL INTERAKTIF 3x3 -->
+            <div class="kernel-grid">
+                <div class="grid-title">
+                    <span>🔢 Kernel 3x3 (nilai awal = edge detection)</span>
+                    <button id="resetEdgeBtn">↺ Reset ke edge</button>
+                </div>
+                <div class="matrix" id="kernelMatrix">
+                    <input id="k00" type="number" value="0" step="any" class="kernel-input">
+                    <input id="k01" type="number" value="-1" step="any" class="kernel-input">
+                    <input id="k02" type="number" value="0" step="any" class="kernel-input">
+                    <input id="k10" type="number" value="-1" step="any" class="kernel-input">
+                    <input id="k11" type="number" value="4" step="any" class="kernel-input">
+                    <input id="k12" type="number" value="-1" step="any" class="kernel-input">
+                    <input id="k20" type="number" value="0" step="any" class="kernel-input">
+                    <input id="k21" type="number" value="-1" step="any" class="kernel-input">
+                    <input id="k22" type="number" value="0" step="any" class="kernel-input">
+                </div>
+                <div class="divider">
+                    <span>⚡ nilai bisa diubah langsung, hasil filter realtime</span>
+                </div>
+                <div class="info-note">
+                    ⚙️ normalisasi otomatis (dibagi total bobot jika total > 1e-6, agar tidak terlalu gelap/terang)
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="footer-note">
+        ✦ filter konvolusi 3x3 dengan mirror horizontal ✦  kernel default: edge detection (Laplacian varian)
+    </div>
+</div>
+
+<script>
+    (function() {
+        // Ambil elemen
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('filterCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        // Dapatkan semua input kernel
+        const kernelIds = [
+            'k00', 'k01', 'k02',
+            'k10', 'k11', 'k12',
+            'k20', 'k21', 'k22'
+        ];
+        const inputs = kernelIds.map(id => document.getElementById(id));
+
+        // Nilai default kernel (edge detection: variasi Laplacian)
+        const defaultKernel = [
+            0, -1, 0,
+            -1, 4, -1,
+            0, -1, 0
+        ];
+
+        // Set nilai awal ke default
+        inputs.forEach((input, idx) => {
+            input.value = defaultKernel[idx];
+        });
+
+        // Tombol reset
+        document.getElementById('resetEdgeBtn').addEventListener('click', () => {
+            inputs.forEach((input, idx) => {
+                input.value = defaultKernel[idx];
+            });
+        });
+
+        // Ambil stream webcam
+        async function initWebcam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 400 },
+                        height: { ideal: 300 },
+                        facingMode: 'user'
+                    }
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                alert('Tidak bisa mengakses webcam: ' + err.message);
+            }
+        }
+
+        // Baca kernel dari input sebagai array number[9]
+        function getCurrentKernel() {
+            return inputs.map(input => {
+                const val = parseFloat(input.value);
+                return isNaN(val) ? 0 : val;   // jika kosong/NaN, anggap 0
+            });
+        }
+
+        // Hitung total bobot (absolut) untuk normalisasi, agar filter tidak blow out.
+        // Jika totalBobot > 1e-6, kita bagi hasil dengan totalBobot, jika tidak (0) maka hindari division by zero.
+        function normalizeKernel(kernel) {
+            // Untuk normalisasi kita jumlahkan nilai absolut, supaya filter seperti edge detection yg jumlahnya 0 tetap proporsional.
+            // Tapi jika jumlah absolut mendekati 0, kita hindari pembagian dengan bilangan terlalu kecil.
+            let sumAbs = 0;
+            for (let i = 0; i < 9; i++) {
+                sumAbs += Math.abs(kernel[i]);
+            }
+            // Jika sumAbs mendekati nol, kita tidak bisa melakukan normalisasi berarti -> hindari overflow.
+            if (sumAbs < 1e-6) return null;   // null akan menandakan tidak ada normalisasi (atau bisa pilih kernel default)
+            // Kembalikan kernel yang sudah dinormalisasi (pembagi = sumAbs)
+            return kernel.map(v => v / sumAbs);
+        }
+
+        // Fungsi konvolusi 3x3 pada imageData yang diberikan (dengan mirroring horizontal sesuai video)
+        function applyConvolution(inputImageData, width, height, kernel) {
+            const data = inputImageData.data;  // RGBA uint8
+            const output = new Uint8ClampedArray(data.length);  // salinan untuk hasil
+
+            // Hitung kernel ternormalisasi (abs sum)
+            const normKernel = normalizeKernel(kernel);
+            let kernelToUse;
+            if (normKernel) {
+                kernelToUse = normKernel;
+            } else {
+                // jika kernel nol semua, set ke kernel paling sederhana (identitas) agar tidak hilang, misal [0,0,0;0,1,0;0,0,0]
+                // tapi karena filter edge detection default tidak 0 semua, ini cuma fallback
+                console.warn("Kernel mendekati nol, fallback ke kernel identitas");
+                kernelToUse = [0,0,0, 0,1,0, 0,0,0];
+            }
+
+            // lakukan konvolusi (tanpa memroses border: pinggir 1 piksel dicerminkan (mirror padding) agar halus)
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    // indeks pusat (x,y) pada array RGBA
+                    const centerIdx = (y * width + x) * 4;
+
+                    // akumulator RGB
+                    let rAcc = 0, gAcc = 0, bAcc = 0;
+
+                    // loop kernel 3x3
+                    for (let ky = -1; ky <= 1; ky++) {
+                        for (let kx = -1; kx <= 1; kx++) {
+                            // koordinat piksel tetangga dengan mirror padding
+                            let nx = x + kx;
+                            let ny = y + ky;
+
+                            // mirror (cermin) jika di luar batas
+                            if (nx < 0) nx = -nx - 1;
+                            if (nx >= width) nx = 2 * width - nx - 1;
+                            if (ny < 0) ny = -ny - 1;
+                            if (ny >= height) ny = 2 * height - ny - 1;
+
+                            // indeks tetangga
+                            const neighborIdx = (ny * width + nx) * 4;
+
+                            // bobot kernel: indeks (ky+1)*3 + (kx+1)
+                            const kernelWeight = kernelToUse[(ky+1)*3 + (kx+1)];
+
+                            // ambil nilai RGB (abaikan alpha)
+                            rAcc += data[neighborIdx] * kernelWeight;
+                            gAcc += data[neighborIdx + 1] * kernelWeight;
+                            bAcc += data[neighborIdx + 2] * kernelWeight;
+                        }
+                    }
+
+                    // clamping nilai 0-255
+                    output[centerIdx] = Math.min(255, Math.max(0, Math.round(rAcc)));
+                    output[centerIdx + 1] = Math.min(255, Math.max(0, Math.round(gAcc)));
+                    output[centerIdx + 2] = Math.min(255, Math.max(0, Math.round(bAcc)));
+                    // salin alpha (sama dengan asli)
+                    output[centerIdx + 3] = data[centerIdx + 3];
+                }
+            }
+
+            // Buat ImageData baru dari output buffer
+            return new ImageData(output, width, height);
+        }
+
+        // Proses frame dari video ke canvas filter
+        function processFrame() {
+            if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+                requestAnimationFrame(processFrame);
+                return;
+            }
+
+            const vWidth = video.videoWidth;
+            const vHeight = video.videoHeight;
+
+            // Pastikan canvas sesuai ukuran (400x300), gambar video ke dalamnya (mirror sudah ditangani oleh css transform)
+            // Namun karena canvas juga di-mirror dengan CSS, gambar video secara normal agar sesuai.
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Gambar video memenuhi canvas (proporsi bisa sedikit stretched, tp tidak masalah utk demo)
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Ambil imageData dari canvas (sumber sudah mirror oleh CSS? tapi kita perlu original buffer)
+            // Karena canvas tidak di-mirror secara internal, hanya tampilan CSS, jadi data buffer masih normal (tidak mirror).
+            // Agar hasil filter konsisten dengan tampilan mirror, kita bisa secara manual mirror di konvolusi? Atau kita mirror di sini.
+            // IDE: kita balik secara horizontal data imageData sebelum konvolusi agar hasil filter sejajar dengan video mirror.
+            // Tapi karena video dimirror dengan CSS, dan kita ingin hasil filter juga terlihat mirror, kita bisa mirror canvas data.
+            // Alternatif: balik imageData secara horizontal, lalu konvolusi, lalu balik lagi? simpler: konvolusi langsung lalu mirror canvas melalui CSS sudah cukup.
+            // TAPI: karena konvolusi bekerja pada data canvas yang tidak mirror, maka hasil filter akan terasa seperti tidak mirror. 
+            // Supaya hasil filter juga mirror, kita bisa membalik data sebelum konvolusi. Atau cukup biarkan karena CSS sudah mirror, sehingga orang melihat hasil filter seperti mirror.
+            // Namun kita ingin filter teraplikasi pada gambar yang sudah mirror (agar filter bergerak sesuai arah mirror). Jadi lebih baik mirror data array sebelum konvolusi.
+            // Kita buat fungsi mirrorImageDataHorizontal.
+            
+            function mirrorImageDataHorizontal(imageData, w, h) {
+                const data = imageData.data;
+                const mirrored = new Uint8ClampedArray(data.length);
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        const srcIdx = (y * w + x) * 4;
+                        const dstIdx = (y * w + (w - 1 - x)) * 4;
+                        mirrored[dstIdx] = data[srcIdx];
+                        mirrored[dstIdx+1] = data[srcIdx+1];
+                        mirrored[dstIdx+2] = data[srcIdx+2];
+                        mirrored[dstIdx+3] = data[srcIdx+3];
+                    }
+                }
+                return new ImageData(mirrored, w, h);
+            }
+
+            // Ambil data canvas
+            let sourceImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            // Mirror data agar sesuai dengan tampilan video yang mirror
+            sourceImageData = mirrorImageDataHorizontal(sourceImageData, canvas.width, canvas.height);
+
+            // Baca kernel dari input
+            const kernel = getCurrentKernel();
+
+            // Terapkan konvolusi
+            const filteredImageData = applyConvolution(sourceImageData, canvas.width, canvas.height, kernel);
+
+            // Karena kita ingin output juga di-mirror (agar cocok dengan video), kita mirror balik hasilnya? 
+            // Atau kita biarkan canvas ditampilkan dengan CSS mirror, jadi tidak perlu mirror balik. 
+            // Tetapi data filteredImageData saat ini adalah hasil dari source yang sudah mirror, sehingga sebenarnya jika ditaruh di canvas tanpa mirror akan terbalik.
+            // Supaya konsisten, kita mirror lagi filteredImageData agar tampilan akhir dengan CSS mirror menjadi benar.
+            const finalData = mirrorImageDataHorizontal(filteredImageData, canvas.width, canvas.height);
+
+            // Letakkan hasil ke canvas
+            ctx.putImageData(finalData, 0, 0);
+
+            requestAnimationFrame(processFrame);
+        }
+
+        // Jalankan inisialisasi dan proses loop
+        initWebcam().then(() => {
+            video.addEventListener('loadeddata', () => {
+                // Mulai loop proses frame
+                processFrame();
+            });
+        });
+
+        // Pastikan jika video sudah bisa sebelum event loadeddata (misal sudah dari cache)
+        if (video.readyState >= 2) {
+            processFrame();
+        }
+
+        // Opsional: tambahkan event listeners untuk setiap input agar mereset loop, sebenarnya processFrame otomatis membaca nilai terbaru tiap frame.
+        // Tidak perlu ekstra.
+
+        // Menangani resize jika canvas berubah (tidak perlu, fixed 400x300)
+    })();
+</script>
+</body>
+</html>
