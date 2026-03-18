@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESP32 Face Detection</title>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <style>
+    body { text-align: center; font-family: Arial; }
+    canvas { position: absolute; left: 0; top: 0; }
+    #container { position: relative; display: inline-block; }
+  </style>
+</head>
+
+<body>
+  <h2>ESP32-S3 Face Detection</h2>
+
+  <div id="container">
+    <img id="video" src="http://192.168.31.157/stream" width="400">
+    <canvas id="overlay"></canvas>
+  </div>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('overlay');
+const ctx = canvas.getContext('2d');
+
+// Resize canvas to match video
+video.onload = () => {
+  canvas.width = video.width;
+  canvas.height = video.height;
+};
+
+// ================= MEDIAPIPE =================
+const faceDetection = new FaceDetection({
+  locateFile: (file) => {
+    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
+  }
+});
+
+faceDetection.setOptions({
+  model: 'short',
+  minDetectionConfidence: 0.5
+});
+
+// ================= DRAW =================
+function drawFaces(detections) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  detections.forEach(det => {
+    const box = det.boundingBox;
+
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(
+      box.xCenter * canvas.width - (box.width * canvas.width)/2,
+      box.yCenter * canvas.height - (box.height * canvas.height)/2,
+      box.width * canvas.width,
+      box.height * canvas.height
+    );
+  });
+}
+
+// ================= LOOP =================
+async function detectLoop() {
+  if (video.complete) {
+    await faceDetection.send({image: video});
+  }
+  requestAnimationFrame(detectLoop);
+}
+
+faceDetection.onResults(results => {
+  if (results.detections) {
+    drawFaces(results.detections);
+  }
+});
+
+// Start loop
+detectLoop();
+</script>
+
+</body>
+</html>
