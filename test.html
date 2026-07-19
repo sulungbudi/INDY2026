@@ -1,103 +1,348 @@
-const char INDEX_HTML[] = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>Face Tracking - ESP32 Camera</title>
+    <title>ESP32-S3 Face Tracking Camera</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { font-family: Arial; text-align: center; background: #111; color: white; }
-        .container { position: relative; width: 640px; margin: auto; }
-        #streamImg, #canvas { position: absolute; top: 0; left: 0; }
-        .info { background: #222; padding: 10px; margin-top: 20px; }
+        /* == Exactly your working styles == */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: rgba(255,255,255,0.95); border-radius: 15px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        h1 { text-align: center; color: #333; margin-bottom: 20px; font-size: 2em; }
+        h1 small { display: block; font-size: 0.5em; color: #666; margin-top: 5px; }
+        .camera-info { background: #f5f5f5; border-radius: 10px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #4CAF50; }
+        .info-row { display: flex; justify-content: space-between; margin: 8px 0; font-family: monospace; font-size: 14px; }
+        .info-label { color: #666; font-weight: bold; }
+        .info-value { color: #2196F3; background: #e3f2fd; padding: 2px 10px; border-radius: 15px; }
+        .video-container { background: #000; border-radius: 10px; overflow: hidden; margin: 20px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
+        .video-container::before { content: ''; display: block; padding-top: 75%; } /* 4:3 */
+        #live-stream { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+        #overlay-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; } /* allow clicks to pass through */
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0; }
+        button { padding: 12px 24px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; flex: 1 1 auto; min-width: 120px; }
+        button.primary { background: #4CAF50; color: white; }
+        button.primary:hover { background: #45a049; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(76,175,80,0.3); }
+        button.secondary { background: #2196F3; color: white; }
+        button.secondary:hover { background: #1976D2; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(33,150,243,0.3); }
+        button.warning { background: #ff9800; color: white; }
+        button.warning:hover { background: #f57c00; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255,152,0,0.3); }
+        button.danger { background: #f44336; color: white; }
+        button.danger:hover { background: #da190b; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(244,67,54,0.3); }
+        .status-panel { background: #f8f9fa; border-radius: 10px; padding: 15px; margin-top: 20px; border: 1px solid #dee2e6; }
+        .status-row { display: flex; justify-content: space-between; margin: 10px 0; padding: 8px; background: white; border-radius: 5px; }
+        .badge { padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 600; }
+        .badge.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .badge.danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .fps-counter { font-size: 24px; font-weight: bold; color: #4CAF50; }
+        .connection-status { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .connected { background: #4CAF50; box-shadow: 0 0 10px #4CAF50; }
+        .disconnected { background: #f44336; box-shadow: 0 0 10px #f44336; }
+        .debug-info { font-family: monospace; font-size: 12px; color: #666; margin-top: 15px; padding: 10px; background: #f1f1f1; border-radius: 5px; word-break: break-all; }
+        .stream-url { background: #e9ecef; padding: 8px; border-radius: 5px; font-family: monospace; user-select: all; cursor: pointer; }
+        .stream-url:hover { background: #dee2e6; }
+        @media (max-width: 600px) { .container { padding: 15px; } button { padding: 10px 16px; font-size: 14px; } }
     </style>
 </head>
 <body>
-    <h1>Face Tracking dari ESP32-S3 Camera</h1>
     <div class="container">
-        <!-- stream endpoint is relative to the page -->
-        <img id="streamImg" src="/stream" width="640" height="480" crossorigin="anonymous">
-        <canvas id="canvas" width="640" height="480"></canvas>
-    </div>
-    <div class="info">
-        Jumlah wajah: <span id="faceCount">0</span>
+        <h1>
+            📹 ESP32-S3 Face Tracking
+            <small>RHYX M21-45 | 320x240</small>
+        </h1>
+        <div class="camera-info">
+            <div class="info-row">
+                <span class="info-label">Camera URL:</span>
+                <span class="info-value stream-url" onclick="copyToClipboard()" id="cameraUrl">http://192.168.31.179/</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Stream Endpoint:</span>
+                <span class="info-value">http://192.168.31.179/stream</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Capture Endpoint:</span>
+                <span class="info-value">http://192.168.31.179/capture</span>
+            </div>
+        </div>
+        
+        <div class="video-container">
+            <img id="live-stream" src="" alt="Camera Stream" crossorigin="anonymous">
+            <canvas id="overlay-canvas"></canvas>
+        </div>
+        
+        <div class="controls">
+            <button class="primary" onclick="startStream()">▶ Start Stream</button>
+            <button class="danger" onclick="stopStream()">⏹ Stop Stream</button>
+            <button class="secondary" onclick="captureStill()">📸 Capture Still</button>
+            <button class="warning" onclick="refreshStream()">🔄 Refresh</button>
+        </div>
+        
+        <div class="status-panel">
+            <div class="status-row">
+                <span><span class="connection-status" id="connectionLed"></span> Connection Status:</span>
+                <span class="badge" id="connectionStatus">Disconnected</span>
+            </div>
+            <div class="status-row">
+                <span>📊 Stream FPS:</span>
+                <span class="fps-counter" id="fpsCounter">0</span>
+            </div>
+            <div class="status-row">
+                <span>📦 Frames Received:</span>
+                <span id="frameCounter">0</span>
+            </div>
+            <div class="status-row">
+                <span>😀 Faces Detected:</span>
+                <span id="faceCount">0</span>
+            </div>
+            <div class="status-row">
+                <span>⏱️ Stream Duration:</span>
+                <span id="streamDuration">00:00</span>
+            </div>
+            <div class="status-row">
+                <span>🔄 Last Refresh:</span>
+                <span id="lastRefresh">Never</span>
+            </div>
+        </div>
+        
+        <div class="debug-info" id="debugInfo">
+            Click "Start Stream" to begin viewing your camera
+        </div>
     </div>
 
+    <!-- Load MediaPipe via import map -->
     <script type="importmap">
-    {
-        "imports": {
-            "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+        {
+            "imports": {
+                "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+            }
         }
-    }
     </script>
 
     <script type="module">
+        // ----- Import MediaPipe -----
         import { FaceDetector, FilesetResolver } from "@mediapipe/tasks-vision";
 
-        const streamImg = document.getElementById('streamImg');
-        const canvas = document.getElementById('canvas');
+        // ----- DOM refs -----
+        const streamImg = document.getElementById('live-stream');
+        const canvas = document.getElementById('overlay-canvas');
         const ctx = canvas.getContext('2d');
+        const connectionLed = document.getElementById('connectionLed');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const fpsCounter = document.getElementById('fpsCounter');
+        const frameCounter = document.getElementById('frameCounter');
         const faceCountSpan = document.getElementById('faceCount');
+        const streamDuration = document.getElementById('streamDuration');
+        const lastRefresh = document.getElementById('lastRefresh');
+        const debugInfo = document.getElementById('debugInfo');
 
+        // ----- Constants -----
+        const CAMERA_IP = "192.168.31.179";
+        const STREAM_URL = `http://${CAMERA_IP}/stream`;
+        const CAPTURE_URL = `http://${CAMERA_IP}/capture`;
+        const ROOT_URL = `http://${CAMERA_IP}/`;
+
+        // ----- State -----
+        let streamActive = false;
+        let frameCount = 0;
+        let fps = 0;
+        let lastFpsUpdate = Date.now();
+        let streamStartTime = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+
+        // MediaPipe detector
         let faceDetector = null;
-        let running = false;
+        let detectorReady = false;
+        let processing = false;
 
-        // Initialize MediaPipe Face Detector
-        async function initFaceDetector() {
-            const vision = await FilesetResolver.forVisionTasks(
-                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
-            );
-            faceDetector = await FaceDetector.createFromOptions(vision, {
-                baseOptions: {
-                    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite"
-                },
-                runningMode: "VIDEO",
-                minDetectionConfidence: 0.5
-            });
-            running = true;
-            processFrame();
+        // ----- Helper: copy URL -----
+        window.copyToClipboard = function() {
+            const url = document.getElementById('cameraUrl').textContent;
+            navigator.clipboard.writeText(url).then(() => alert('URL copied!'));
+        };
+
+        // ----- UI updates -----
+        function updateConnectionStatus(connected) {
+            if (connected) {
+                connectionLed.className = 'connection-status connected';
+                connectionStatus.textContent = 'Connected';
+                connectionStatus.className = 'badge success';
+            } else {
+                connectionLed.className = 'connection-status disconnected';
+                connectionStatus.textContent = 'Disconnected';
+                connectionStatus.className = 'badge danger';
+            }
         }
 
-        // Process each new frame
-        function processFrame() {
-            if (!running) return;
+        function debug(msg) {
+            const time = new Date().toLocaleTimeString();
+            debugInfo.innerHTML = `[${time}] ${msg}`;
+            console.log(`[Camera] ${msg}`);
+        }
 
-            // Draw the current image onto the canvas
+        // ----- MediaPipe initialisation -----
+        async function initFaceDetector() {
+            try {
+                const vision = await FilesetResolver.forVisionTasks(
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+                );
+                faceDetector = await FaceDetector.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite"
+                    },
+                    runningMode: "VIDEO",
+                    minDetectionConfidence: 0.5
+                });
+                detectorReady = true;
+                debug("Face detector loaded.");
+            } catch (e) {
+                debug("Failed to load face detector: " + e.message);
+            }
+        }
+
+        // ----- Process a frame -----
+        function processFrame() {
+            if (!streamActive || !detectorReady || processing) return;
+            processing = true;
+
+            // Draw the current image onto the canvas (scaled to match display)
+            const rect = streamImg.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(streamImg, 0, 0, canvas.width, canvas.height);
 
-            // Run face detection on the canvas
-            if (faceDetector) {
+            // Run detection
+            try {
                 const detections = faceDetector.detectForVideo(canvas, performance.now());
-                faceCountSpan.textContent = detections.detections.length;
+                const count = detections.detections.length;
+                faceCountSpan.textContent = count;
 
-                // Draw bounding boxes (optional)
+                // Draw bounding boxes
                 ctx.strokeStyle = '#00FF00';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 3;
                 for (const detection of detections.detections) {
                     const box = detection.boundingBox;
                     ctx.strokeRect(box.originX, box.originY, box.width, box.height);
                 }
+            } catch (e) {
+                // ignore detection errors
             }
-
-            requestAnimationFrame(processFrame);
+            processing = false;
         }
 
-        // Start when the image loads
+        // ----- Stream control -----
+        window.startStream = function() {
+            streamActive = true;
+            frameCount = 0;
+            streamStartTime = Date.now();
+            reconnectAttempts = 0;
+            updateConnectionStatus(true);
+            refreshStream();
+            debug('Stream started.');
+            if (!detectorReady) initFaceDetector();
+        };
+
+        window.stopStream = function() {
+            streamActive = false;
+            streamImg.src = '';
+            canvas.width = 0; canvas.height = 0;
+            updateConnectionStatus(false);
+            faceCountSpan.textContent = '0';
+            debug('Stream stopped.');
+        };
+
+        window.refreshStream = function() {
+            if (!streamActive) {
+                startStream();
+                return;
+            }
+            const now = Date.now();
+            streamImg.src = STREAM_URL + '?' + now;
+            lastRefresh.textContent = new Date().toLocaleTimeString();
+            debug('Stream refreshed.');
+        };
+
+        window.captureStill = function() {
+            stopStream();
+            const stillUrl = CAPTURE_URL + '?' + Date.now();
+            window.open(stillUrl, '_blank');
+            debug(`Capturing still: ${stillUrl}`);
+        };
+
+        // ----- Image events -----
         streamImg.onload = function() {
-            if (!faceDetector) {
-                initFaceDetector();
+            if (!streamActive) return;
+            frameCount++;
+            frameCounter.textContent = frameCount;
+
+            // FPS calc
+            const now = Date.now();
+            const delta = (now - lastFpsUpdate) / 1000;
+            if (delta >= 1) {
+                fps = (frameCount / delta).toFixed(1);
+                fpsCounter.textContent = fps;
+                frameCount = 0;
+                lastFpsUpdate = now;
+            }
+
+            // Duration
+            if (streamStartTime) {
+                const dur = Math.floor((now - streamStartTime) / 1000);
+                const m = String(Math.floor(dur / 60)).padStart(2, '0');
+                const s = String(dur % 60).padStart(2, '0');
+                streamDuration.textContent = `${m}:${s}`;
+            }
+
+            reconnectAttempts = 0;
+
+            // Process frame for face detection
+            processFrame();
+
+            // Schedule next frame
+            if (streamActive) {
+                // We use a slight delay to avoid overloading the browser
+                setTimeout(() => {
+                    if (streamActive) streamImg.src = STREAM_URL + '?' + Date.now();
+                }, 50);
             }
         };
 
-        // Handle errors – retry after a moment
         streamImg.onerror = function() {
-            setTimeout(() => {
-                streamImg.src = '/stream?' + Date.now();
-            }, 500);
+            if (streamActive) {
+                reconnectAttempts++;
+                if (reconnectAttempts <= maxReconnectAttempts) {
+                    debug(`Stream error, reconnecting (${reconnectAttempts}/${maxReconnectAttempts})`);
+                    setTimeout(() => {
+                        if (streamActive) refreshStream();
+                    }, 2000 * reconnectAttempts);
+                } else {
+                    debug('Max reconnections reached. Stopping.');
+                    stopStream();
+                }
+            }
         };
 
-        // Start the stream (workaround for initial load)
-        streamImg.src = '/stream?' + Date.now();
+        // ----- Auto-refresh (keep alive) -----
+        setInterval(() => {
+            if (streamActive) refreshStream();
+        }, 30000);
+
+        // ----- On page load -----
+        window.onload = function() {
+            debug(`Camera at ${ROOT_URL}`);
+            fetch(ROOT_URL, { mode: 'no-cors' })
+                .then(() => debug('Camera reachable. Click Start Stream.'))
+                .catch(() => debug('⚠️ Camera not reachable. Check connection.'));
+            // Pre‑init detector
+            initFaceDetector();
+        };
+
+        // Adjust canvas size on resize
+        window.addEventListener('resize', () => {
+            if (streamActive) processFrame();
+        });
     </script>
 </body>
 </html>
-)rawliteral";
