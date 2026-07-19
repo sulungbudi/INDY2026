@@ -1,0 +1,33 @@
+html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Face Tracking - ESP32 Camera</title>
+    <style>
+        body { font-family: Arial; text-align: center; background: #111; color: white; }
+        .container { position: relative; width: 640px; margin: auto; }
+        #streamImg, #canvas { position: absolute; top: 0; left: 0; }
+        .info { background: #222; padding: 10px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Face Tracking dari ESP32-S3 Camera</h1>
+    <div class="container">
+        <img id="streamImg" src="http://192.168.31.179" width="640" height="480" crossorigin="anonymous">
+        <canvas id="canvas" width="640" height="480"></canvas>
+    </div>
+    <div class="info">
+        Jumlah wajah: <span id="faceCount">0</span>
+    </div>
+    <script type="importmap">
+        {
+            "imports": {
+                "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+            }
+        }
+    </script>
+    <script type="module">
+        // Kode akan diisi dengan bantuan DeepSeek
+    </script>
+</body>
+</html>
