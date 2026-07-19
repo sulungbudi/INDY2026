@@ -3,20 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 Camera Stream</title>
+    <title>Video Stream</title>
     <style>
-        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        img { max-width: 100%; max-height: 100%; }
+        body { font-family: Arial, sans-serif; text-align: center; background: #000; color: #fff; margin: 0; padding: 20px; }
+        h1 { margin-top: 0; }
+        img { max-width: 100%; border: 2px solid #333; }
     </style>
 </head>
 <body>
-    <img id="stream" src="http://192.168.31.179/stream" crossorigin="anonymous" onerror="this.src=this.src+'?'+Date.now();">
-    <script>
-        // Optional: auto-reload on error
-        const img = document.getElementById('stream');
-        img.onerror = function() {
-            this.src = 'http://192.168.31.179/stream?' + Date.now();
-        };
-    </script>
+    <h1>Video Stream</h1>
+    <img src="http://192.168.31.179/stream" alt="Stream" />
 </body>
 </html>
